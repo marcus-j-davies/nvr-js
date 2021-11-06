@@ -8,3 +8,8 @@
 
     **Fixes**
      - Correct drive space usage query.
+
+  - 1.0.2
+
+    **Fixes**
+     - Fix directory creation

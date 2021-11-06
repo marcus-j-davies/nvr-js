@@ -1,6 +1,6 @@
 {
 	"name": "nvr-js",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "A simple, lightweight, but very functional NVR aimed at 24/7 recording using nodejs.",
 	"main": "NVRJS.js",
 	"keywords": [

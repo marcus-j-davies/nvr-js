@@ -33,16 +33,21 @@ console.log(' - Config loaded: ' + path.join(os.homedir(), 'nvrjs.config.js'));
 let SQL;
 const SensorTimestamps = {};
 
-console.log(' - Checking directoires and ffmpeg.');
+console.log(' - Checking volumes and ffmpeg.');
 
 if (!fs.existsSync(config.system.storageVolume)) {
+	console.log(' - Storage volume does not exist');
+	process.exit();
+} else {
 	try {
-		console.log(' - Creating storage directories.');
-		fs.mkdirSync(config.system.storageVolume, { recursive: true });
-		fs.mkdirSync(path.join(config.system.storageVolume, 'system'));
-		fs.mkdirSync(path.join(config.system.storageVolume, 'cameras'));
+		if (!fs.existsSync(path.join(config.system.storageVolume, 'system'))) {
+			fs.mkdirSync(path.join(config.system.storageVolume, 'system'));
+		}
+		if (!fs.existsSync(path.join(config.system.storageVolume, 'cameras'))) {
+			fs.mkdirSync(path.join(config.system.storageVolume, 'cameras'));
+		}
 	} catch (e) {
-		console.log('Error creating storage directory.');
+		console.log('Error creating system directories.');
 		console.log(e.message);
 		process.exit(0);
 	}

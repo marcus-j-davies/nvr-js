@@ -2,7 +2,7 @@
 
 # nvr-js
 
-NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.
+NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.  
 its primarily aimd for 24/7 recording and live viewing.
 
 Under the hood it uses ffmpeg, node js, websockets and sqlite, all wrapped in a web based user interface.

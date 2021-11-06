@@ -14,7 +14,7 @@ The 24/7 recordings can be reviewed using a timeline UI where the events are als
 
 ### Inspired by shinobi.video
 [Shinobi](https://shinobi.video) is a fully featured, jam packed NVR, also built using Node JS.
-I was using Shinobi and thought it was amazing! - however it had sooo much to it, it was too overkill for my needs.
+I was using Shinobi and thought it was amazing! - however, it had sooo much to it, it was too overkill for my needs.
 
 You can look at NVR-JS as a very slimed down version of shinobi video, built from the ground up.
 the table below, shows how slimmed down it is.

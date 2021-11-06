@@ -5,7 +5,7 @@
 NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.
 its primarily aimd for 24/7 recording and live viewing.
 
-Under the hood it uses ffmpeg, node js and websockets, all wrapped in a web based user interface.
+Under the hood it uses ffmpeg, node js, websockets and sqlite, all wrapped in a web based user interface.
 The NVR has an API that allows to create events and timestamp them on the 24/7 recordings.
 
 The 24/7 recordings can be reviewed using a timeline UI where the events are also time aligned on that same timeline.
@@ -32,6 +32,65 @@ the table below, shows how slimmed down it is.
 
 As you can see, NVR JS does not pack the same features as Shinobi Video, but that's the intention.
 NVR JS is designed for 24/7 recording with access to live footage, and the 24/7 recordings.
+
+### Configuration.
+The first time you start NVR JS, it will create a config file at **/%home%/nvrjs.config.js**,  
+it will then terminate allowing you to start adjusting your system, before starting it up again.
+
+```javascript
+module.exports = {
+	/* System Settings */
+	system: {
+		/* bcrypt password (default: admin) */
+		password: '$2a$10$DP3jIaujOnmDjp7XRqiYsOs19Qp0VGZBm9JuW1fSHHgB24HdtVR.q',
+		/* Any random string */
+		cookieKey: 'f3gi6FLhIPVV31d1TBQUPEAngrI3wAoP',
+		interfacePort: 7878,
+		/* location used for 24/7 recording and database generation */
+		storageLocation: '/mnt/CCTV',
+		/* Continuous recording settings */
+		ffmpegLocation: 'ffmpeg',
+		continuousSegTimeMinutes: 15,
+		continuousDays: 14,
+		continuousPurgeIntervalHours: 24,
+		/* event throttle per sensorId */
+		eventSensorIdCoolOffSeconds: 60
+	},
+	/* Cameras */
+	cameras: {
+		'66e39d21-72c4-405c-a838-05a8e8fe0742': {
+			name: 'Garage',
+			/* Input Source Config */
+			/* The keys and values represent the ffmpeg options */
+			inputConfig: {
+				use_wallclock_as_timestamps: '1',
+				fflags: '+igndts',
+				analyzeduration: '1000000',
+				probesize: '1000000',
+				rtsp_transport: 'tcp'
+			},
+			/* Input Address */
+			input: 'rtsp://user:password@ip:port/live0',
+			/* Recording 24/7 */
+			/* Disabling continuous recording, will disable the ability to create events */
+			continuous: true,
+			/* Live streaming config */
+			/* These settings should be good enough for a low delay live stream, providing your camera produces h264 frames */ 
+			/* streaming is achived using websockets using MP4 fragments */
+			liveConfig: {
+				codecString: 'video/mp4; codecs="avc1.64001f"',
+				streamConfig: {
+					an: '',
+					vcodec: 'copy',
+					f: 'mp4',
+					movflags: '+frag_keyframe+empty_moov+default_base_moof',
+					reset_timestamps: '1'
+				}
+			}
+		}
+	}
+};
+```
 
 
 ### The Event API.

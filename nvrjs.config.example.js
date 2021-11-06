@@ -7,7 +7,8 @@ module.exports = {
 		cookieKey: 'f3gi6FLhIPVV31d1TBQUPEAngrI3wAoP',
 		interfacePort: 7878,
 		/* location used for 24/7 recording and database generation */
-		storageLocation: '/mnt/CCTV',
+		/* This should be the root of a mount point i.e a dedicated HDD for 24/7 recordings */
+		storageVolume: '/Volumes/CCTV',
 		/* Continuous recording settings */
 		ffmpegLocation: 'ffmpeg',
 		continuousSegTimeMinutes: 15,

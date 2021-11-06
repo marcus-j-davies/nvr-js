@@ -35,12 +35,12 @@ const SensorTimestamps = {};
 
 console.log(' - Checking directoires and ffmpeg.');
 
-if (!fs.existsSync(config.system.storageLocation)) {
+if (!fs.existsSync(config.system.storageVolume)) {
 	try {
 		console.log(' - Creating storage directories.');
-		fs.mkdirSync(config.system.storageLocation, { recursive: true });
-		fs.mkdirSync(path.join(config.system.storageLocation, 'system'));
-		fs.mkdirSync(path.join(config.system.storageLocation, 'cameras'));
+		fs.mkdirSync(config.system.storageVolume, { recursive: true });
+		fs.mkdirSync(path.join(config.system.storageVolume, 'system'));
+		fs.mkdirSync(path.join(config.system.storageVolume, 'cameras'));
 	} catch (e) {
 		console.log('Error creating storage directory.');
 		console.log(e.message);
@@ -84,7 +84,7 @@ App.use('/static', express.static(path.join(__dirname, 'web', 'static')));
 
 App.get('/systeminfo', CheckAuthMW, (req, res) => {
 	osu.cpu.usage().then((CPU) => {
-		osu.drive.info().then((DISK) => {
+		osu.drive.info(config.system.storageVolume).then((DISK) => {
 			osu.mem.info().then((MEM) => {
 				const Info = {
 					CPU: CPU,
@@ -250,7 +250,7 @@ Cameras.forEach((cameraID) => {
 });
 
 function CreateOrConnectSQL(CB) {
-	const Path = path.join(config.system.storageLocation, 'system', 'data.db');
+	const Path = path.join(config.system.storageVolume, 'system', 'data.db');
 
 	if (!fs.existsSync(Path)) {
 		console.log(' - Creating db structure.');
@@ -308,13 +308,13 @@ function InitCamera(Cam, cameraID) {
 		'/segments/' + cameraID,
 		CheckAuthMW,
 		express.static(
-			path.join(config.system.storageLocation, 'cameras', cameraID),
+			path.join(config.system.storageVolume, 'cameras', cameraID),
 			{ acceptRanges: true }
 		)
 	);
 
 	if (Cam.continuous !== undefined && Cam.continuous) {
-		let Path = path.join(config.system.storageLocation, 'cameras', cameraID);
+		let Path = path.join(config.system.storageVolume, 'cameras', cameraID);
 		if (!fs.existsSync(Path)) {
 			fs.mkdirSync(Path);
 		}
@@ -439,7 +439,7 @@ async function purgeContinuous() {
 		rows.forEach((S) => {
 			fs.unlinkSync(
 				path.join(
-					config.system.storageLocation,
+					config.system.storageVolume,
 					'cameras',
 					S.CameraID,
 					S.FileName

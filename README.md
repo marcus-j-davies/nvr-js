@@ -30,7 +30,7 @@ the table below, shows how slimmed down it is.
 | Configuration UI  | &check; | Manual Editing      |
 | Mobile Support    | &check; |                     |
 
-As you can see, NVR JS does not pack the same features as Shinobi Video, but that's the intention.
+As you can see, NVR JS does not pack the same features as Shinobi Video, but that's the intention.  
 NVR JS is designed for 24/7 recording with access to live footage, and the 24/7 recordings.
 
 ### Configuration.

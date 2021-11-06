@@ -1,0 +1,113 @@
+@font-face {
+  font-family: "Roboto";
+  src: url("fonts/Roboto-Light.ttf");
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-size: 16px;
+  font-family: Roboto, HelveticaNeue-Light, "Calibri Light" ;
+  background-color: darkgray;
+}
+
+.sideBar {
+  width: 270px;
+  height: 100vh;
+  border-color: black;
+  border-width: 1px;
+  border-style: solid;
+  background-color: gainsboro;
+  -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  padding: 10px;
+  text-align: center;
+}
+
+.sideBar .cameraPanel {
+  width: 90%;
+  border-color: black;
+  border-style: solid;
+  height: 120px;
+  border-width: 1px;
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  border-radius: 8px;
+  margin: auto;
+  padding: 5px;
+  background-color: white;
+  -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  margin-bottom: 10px;
+}
+
+.cameraPanel .title {
+  margin-top: 10px;
+  font-family: Roboto;
+}
+
+.cameraPanel .snapShot {
+  width: 120px;
+  border-radius: 4px;
+}
+.cameraPanel .cameraPanelOption{
+    margin-top: 5px;
+}
+
+.loginBox {
+  background-image: url('../images/logo.png');
+  width: 500px;
+  height: 400px;
+  border-color: black;
+  border-width: 1px;
+  border-style: solid;
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  border-radius: 8px;
+  background-color: gainsboro;
+  margin: auto;
+  margin-top: 150px;
+  -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+  box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
+}
+
+.loginTable {
+  width: 50px;
+  margin: auto;
+  margin-top: 60%;
+}
+
+.loginLogo {
+  font-family: Orbitron;
+  font-size: 50px;
+  text-align: center;
+  margin-top: 30px;
+}
+
+.videoLive{
+  width: 100%;
+  height: 95%;
+  margin: auto;
+}
+.videoScrub{
+  width: 100%;
+  height: 70%;
+  margin: auto;
+}
+
+.ui-dialog-buttonset{
+  font-size: 12px;
+}
+
+.videoButton{
+  width: 100%;
+  height: 30px;
+  margin-bottom: 5px;
+}

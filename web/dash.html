@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>NVR JS : Dashboard</title>
+  <!--Style-->
+<link rel="stylesheet" href="static/css/default.css" />
+<link rel="stylesheet" href="static/css/font-awesome.min.css">
+
+<!--jquery-->
+<link rel="stylesheet" href="static/css/jquery-ui.min.css">
+<script src="static/js/jquery-3.6.0.min.js"></script>
+<script src="static/js/jquery-ui.min.js"></script>
+
+<!--Day JS-->
+<script src="static/js/customParseFormat.js"></script>
+<script src="static/js/dayjs.min.js"></script>
+
+<!--timeline-->
+<link rel="stylesheet" href="static/js/vis-timeline-graph2d.min.css" />
+<script src="static/js/vis-timeline-graph2d.min.js"></script>
+
+<!--scripts-->
+<script src="static/js/scripts.js"></script>
+<script src="static/js/canvas2image.js"></script>
+
+<!--socket io-->
+<script src="static/js/socket.io.min.js"></script>
+  </head>
+  <body>
+    <div class="sideBar">
+      <div class="cameraPanel" style="height: 110px;background-color: transparent;">
+        <div class="title">System</div>
+        <table style="width: 100%;">
+          <tr>
+            <td style="text-align: left;">CPU</td>
+            <td style="text-align:right;" id="CPU"></td>
+          </tr>
+          <tr>
+            <td style="text-align: left;">RAM</td>
+            <td style="text-align:right;" id="RAM"></td>
+          </tr>
+          <tr>
+            <td style="text-align: left;">Disk</td>
+            <td style="text-align:right;" id="DISK"></td>
+          </tr>
+        </table>
+      </div>
+      <hr />
+      {{#each cameras}}
+      <div class="cameraPanel">
+        <div class="title">{{this.name}}</div>
+        <table class="cameraPanelOption">
+          <tr>
+            <td>
+              <img class="snapShot" src="/snapshot/{{@key}}/120" />
+            </td>
+            <td>
+              <button onclick="StartLive('{{@key}}','{{this.name}}','{{this.liveConfig.codecString}}')" class="videoButton"><i class="fa fa-play"></i> Live</button>
+              <button onclick="StartTimeline('{{@key}}','{{this.name}}')" class="videoButton"><i class="fa fa-history"></i> Timeline</button>
+            </td>
+          </tr>
+        </table>
+      </div>
+      {{/each}}
+    </div>
+
+    <template id="liveView">
+        <video class="videoLive"></video>
+    </template>
+
+    <template id="scrub">
+      <video class="videoScrub" type="video/mp4" src="" preload="true" muted ></video>
+      <div id="timeline"></div>
+  </template>
+
+  <script>
+    StartStats();
+  </script>
+  </body>
+</html>

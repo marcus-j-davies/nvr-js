@@ -112,7 +112,7 @@ http://IP:7878/event/{system-password}/{camera-id}
 
 
 ### Anyway
-I built this for my needs, it's very DIY and will likely have some faults in some places.
-but if you want to use it, chnage it, build on it, feel free - I welcome PR's.
+I built this for my needs, it's very DIY and will likely have some faults in some places.  
+But if you want to use it, change it, build on it, feel free - I welcome PR's.
 
 [Change Log](./CHANGELOG.md)

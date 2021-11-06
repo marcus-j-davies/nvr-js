@@ -40,11 +40,13 @@ To create events one only needs to send the following JSON payload.
 The view here, is that you create events from various sensors in your setup, this effectively acts as your motion detector
 or some other key event - It really up to you. 
 
+```javascript
 {
      "name": "Motion Detected" | "Door Opened" | "Some Other Event" | "Of Your Choice",
      "sensorId": "HUEN849",
      "date": 1636194611
 }
+```
 
-You **POST** this payload to the API as follows.
+You **POST** this payload to the API as follows:  
 http://IP:7878/event/{system-password}/{camera-id}

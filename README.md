@@ -97,7 +97,7 @@ module.exports = {
 To create events one only needs to send the following JSON payload.
 
 The view here, is that you create events from various sensors in your setup, this effectively acts as your motion detector
-or some other key event - It really up to you. 
+or some other key event - Its really up to you. 
 
 ```javascript
 {

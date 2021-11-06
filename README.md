@@ -76,7 +76,7 @@ module.exports = {
 			continuous: true,
 			/* Live streaming config */
 			/* These settings should be good enough for a low delay live stream, providing your camera produces h264 frames */ 
-			/* streaming is achieved using websockets using MP4 fragments */
+			/* streaming is achieved with websockets and MP4 fragments */
 			liveConfig: {
 				codecString: 'video/mp4; codecs="avc1.64001f"',
 				streamConfig: {

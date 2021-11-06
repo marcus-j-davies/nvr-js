@@ -108,7 +108,9 @@ or some other key event - It's really up to you.
 ```
 
 You **POST** this payload to the API as follows:  
-http://IP:7878/event/{system-password}/{camera-id}
+http://IP:7878/event/{system-password}/{camera-id}  
+Example: http://IP:7878/event/admin/66e39d21-72c4-405c-a838-05a8e8fe0742
+
 
 
 ### Anyway

@@ -115,4 +115,10 @@ http://IP:7878/event/{system-password}/{camera-id}
 I built this for my needs, it's very DIY and will likely have some faults in some places.  
 But if you want to use it, change it, build on it, feel free - I welcome PR's.
 
+```shell
+npm install nvr-js
+ ........
+node NVRJS.js
+```
+
 [Change Log](./CHANGELOG.md)

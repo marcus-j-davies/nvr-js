@@ -119,7 +119,9 @@ But if you want to use it, change it, build on it, feel free - I welcome PR's.
 
 ```
 npm install nvr-js
-node NVRJS.js
+cd ./node_modules/nvr-js
+pm2 start NVRJS.js
+pm2 save
 ```
 
 [Change Log](./CHANGELOG.md)

@@ -4,17 +4,17 @@
   "description": "A simple, lightweight, but very functional NVR aimed at 24/7 recording using nodejs.",
   "main": "NVRJS.js",
   "keywords": [
-		"nvr",
-		"cctv",
-		"record",
-		"24/7",
+    "nvr",
+    "cctv",
+    "record",
+    "24/7",
     "continuous",
-		"footage",
+    "footage",
     "streaming",
     "nodejs",
     "node"
-	],
-  "author":{
+  ],
+  "author": {
     "name": "Marcus Davies",
     "email": "marcus.davies83@icloud.com"
   },

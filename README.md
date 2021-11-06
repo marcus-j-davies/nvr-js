@@ -3,7 +3,7 @@
 # nvr-js
 
 NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.  
-its primarily aimed for 24/7 recording and live viewing.
+it's primarily aimed for 24/7 recording and live viewing.
 
 Under the hood it uses ffmpeg, node js, websockets and sqlite, all wrapped in a web based user interface.
 The NVR has an API that allows to create events and timestamp them on the 24/7 recordings.
@@ -97,7 +97,7 @@ module.exports = {
 To create events one only needs to send the following JSON payload.
 
 The view here, is that you create events from various sensors in your setup, this effectively acts as your motion detector
-or some other key event - Its really up to you. 
+or some other key event - It's really up to you. 
 
 ```javascript
 {
@@ -109,3 +109,10 @@ or some other key event - Its really up to you.
 
 You **POST** this payload to the API as follows:  
 http://IP:7878/event/{system-password}/{camera-id}
+
+
+### Anyway
+I built this for my needs, it's very DIY and will likely have some faults in some places.
+but if you want to use it, chnage it, build on it, feel free - I welcome PR's.
+
+[Change Log](./CHANGELOG.md)

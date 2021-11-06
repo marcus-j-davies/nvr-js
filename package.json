@@ -3,6 +3,17 @@
   "version": "1.0.0",
   "description": "A simple, lightweight, but very functional NVR aimed at 24/7 recording using nodejs.",
   "main": "NVRJS.js",
+  "keywords": [
+		"nvr",
+		"cctv",
+		"record",
+		"24/7",
+    "continuous",
+		"footage",
+    "streaming",
+    "nodejs",
+    "node"
+	],
   "author":{
     "name": "Marcus Davies",
     "email": "marcus.davies83@icloud.com"
@@ -22,5 +33,13 @@
   "devDependencies": {
     "eslint": "^8.1.0",
     "prettier": "^2.4.1"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/marcus-j-davies/nvr-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcus-j-davies/nvr-js.git"
+  },
+  "homepage": "https://github.com/marcus-j-davies/nvr-js#readme"
 }

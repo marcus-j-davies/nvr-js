@@ -28,7 +28,8 @@ module.exports = {
 				fflags: '+igndts',
 				analyzeduration: '1000000',
 				probesize: '1000000',
-				rtsp_transport: 'tcp'
+				rtsp_transport: 'tcp',
+				stimeout: '30000000'
 			},
 			/* Input Address */
 			input: 'rtsp://user:password@ip:port/live0',

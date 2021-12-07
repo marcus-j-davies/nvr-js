@@ -12,6 +12,7 @@ const path = require('path');
 const sql = require('sqlite3');
 const osu = require('node-os-utils');
 const dayjs = require('dayjs');
+const queue = require('queue-fifo');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
 
@@ -40,11 +41,11 @@ if (!fs.existsSync(config.system.storageVolume)) {
 	process.exit();
 } else {
 	try {
-		if (!fs.existsSync(path.join(config.system.storageVolume, 'system'))) {
-			fs.mkdirSync(path.join(config.system.storageVolume, 'system'));
+		if (!fs.existsSync(path.join(config.system.storageVolume, 'NVRJS_SYSTEM'))) {
+			fs.mkdirSync(path.join(config.system.storageVolume, 'NVRJS_SYSTEM'));
 		}
-		if (!fs.existsSync(path.join(config.system.storageVolume, 'cameras'))) {
-			fs.mkdirSync(path.join(config.system.storageVolume, 'cameras'));
+		if (!fs.existsSync(path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS'))) {
+			fs.mkdirSync(path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS'));
 		}
 	} catch (e) {
 		console.log('Error creating system directories.');
@@ -68,6 +69,23 @@ CreateOrConnectSQL(() => {
 	);
 	purgeContinuous();
 });
+
+console.log(' - Starting data write queue.');
+const FIFO = new queue();
+function Commit() {
+	if (!FIFO.isEmpty()) {
+		const Query = FIFO.dequeue();
+		const STMT = SQL.prepare(Query.statement, () => {
+			STMT.run(Query.params, () => {
+				STMT.finalize();
+				Commit();
+			});
+		});
+	} else {
+		setTimeout(Commit, 10000);
+	}
+}
+setTimeout(Commit, 10000);
 
 console.log(' - Creating express application.');
 const App = new express();
@@ -138,7 +156,7 @@ App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
 	);
 	STMT.all(
 		[req.params.CameraID, parseInt(req.params.Start), parseInt(req.params.End)],
-		function (err, rows) {
+		(err, rows) => {
 			Data.segments = rows;
 			STMT.finalize();
 			STMT = SQL.prepare(
@@ -150,7 +168,7 @@ App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
 					parseInt(req.params.Start),
 					parseInt(req.params.End)
 				],
-				function (err, rows) {
+				(err, rows) => {
 					Data.events = rows;
 					STMT.finalize();
 					res.type('application/json');
@@ -212,18 +230,17 @@ App.post('/event/:Password/:CameraID', (req, res) => {
 	if (bcrypt.compareSync(req.params.Password, config.system.password)) {
 		if (config.cameras[req.params.CameraID].continuous) {
 			if (!SensorTimestamps.hasOwnProperty(req.body.sensorId)) {
-				const STMT = SQL.prepare(
-					'INSERT INTO Events(EventID,CameraID,Name,SensorID,Date) VALUES(?,?,?,?,?)'
-				);
-				STMT.run([
-					generateUUID(),
-					req.params.CameraID,
-					req.body.name,
-					req.body.sensorId,
-					req.body.date
-				]);
-				STMT.finalize();
-
+				FIFO.enqueue({
+					statement:
+						'INSERT INTO Events(EventID,CameraID,Name,SensorID,Date) VALUES(?,?,?,?,?)',
+					params: [
+						generateUUID(),
+						req.params.CameraID,
+						req.body.name,
+						req.body.sensorId,
+						req.body.date
+					]
+				});
 				res.status(204);
 				res.end();
 
@@ -255,17 +272,17 @@ Cameras.forEach((cameraID) => {
 });
 
 function CreateOrConnectSQL(CB) {
-	const Path = path.join(config.system.storageVolume, 'system', 'data.db');
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', 'data.db');
 
 	if (!fs.existsSync(Path)) {
 		console.log(' - Creating db structure.');
-		SQL = new sql.Database(Path, function () {
+		SQL = new sql.Database(Path, () => {
 			SQL.run(
 				'CREATE TABLE Segments(SegmentID TEXT, CameraID TEXT, FileName TEXT, Start NUMERIC, End NUMERIC)',
-				function () {
+				() => {
 					SQL.run(
 						'CREATE TABLE Events(EventID TEXT,CameraID TEXT, Name TEXT, SensorID TEXT, Date NUMERIC)',
-						function () {
+						() => {
 							SQL.close();
 							console.log(' - Connecting to db.');
 							SQL = new sql.Database(Path, CB);
@@ -313,13 +330,13 @@ function InitCamera(Cam, cameraID) {
 		'/segments/' + cameraID,
 		CheckAuthMW,
 		express.static(
-			path.join(config.system.storageVolume, 'cameras', cameraID),
+			path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS', cameraID),
 			{ acceptRanges: true }
 		)
 	);
 
 	if (Cam.continuous !== undefined && Cam.continuous) {
-		let Path = path.join(config.system.storageVolume, 'cameras', cameraID);
+		let Path = path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS', cameraID);
 		if (!fs.existsSync(Path)) {
 			fs.mkdirSync(Path);
 		}
@@ -332,7 +349,7 @@ function InitCamera(Cam, cameraID) {
 		CommandArgs.push('copy');
 		CommandArgs.push('-f');
 		CommandArgs.push('segment');
-		CommandArgs.push('-movflags');
+        CommandArgs.push('-movflags');
 		CommandArgs.push('+faststart');
 		CommandArgs.push('-segment_atclocktime');
 		CommandArgs.push('1');
@@ -341,7 +358,7 @@ function InitCamera(Cam, cameraID) {
 		CommandArgs.push('-strftime');
 		CommandArgs.push('1');
 		CommandArgs.push('-segment_list');
-		CommandArgs.push('pipe:3');
+		CommandArgs.push('pipe:4');
 		CommandArgs.push('-segment_time');
 		CommandArgs.push(60 * config.system.continuousSegTimeMinutes);
 		CommandArgs.push(Path);
@@ -356,52 +373,70 @@ function InitCamera(Cam, cameraID) {
 
 	CommandArgs.push('-metadata');
 	CommandArgs.push('title="NVR JS Stream"');
-	CommandArgs.push('pipe:1');
+	CommandArgs.push('pipe:3');
 
-	const MP4F = new MP4Frag();
-	const Process = new childprocess.spawn(
-		config.system.ffmpegLocation,
-		CommandArgs,
-		{ detached: true, stdio: ['ignore', 'pipe', 'ignore', 'pipe'] }
+	const Options = {
+		detached: true,
+		stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe']
+	};
+	const respawn = (Spawned) => {
+		const MP4F = new MP4Frag();
+
+		const IOptions = {
+			path: '/streams/' + cameraID
+		};
+		const Socket = io(HTTP, IOptions);
+		Socket.on('connection', (ClientSocket) => {
+			ClientSocket.emit('segment', MP4F.initialization);
+		});
+
+		MP4F.on('segment', (data) => {
+			Socket.sockets.sockets.forEach((ClientSocket) => {
+				ClientSocket.emit('segment', data);
+			});
+		});
+
+		Spawned.on('close', () => {
+			console.log(' - Camera: ' + Cam.name + ' was terminated, respawning after 10 seconds...');
+			Spawned.kill();
+			MP4F.destroy();
+			setTimeout(()=>{
+				respawn(
+					childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
+				);
+			},10000)
+			
+		});
+
+
+
+		Spawned.stdio[3].on('data',(data) =>{
+			MP4F.write(data,'binary');
+		});
+		//Spawned.stdio[1].pipe(MP4F);
+		Spawned.stdio[4].on('data', (FN) => {
+			if (Processors[cameraID] !== undefined) {
+				const FileName = FN.toString().trim().replace(/\n/g, '');
+				const Start = dayjs(
+					FileName.replace(/.mp4/g, ''),
+					'YYYY-MM-DDTHH-mm-ss'
+				).unix();
+				const End = dayjs().unix();
+				FIFO.enqueue({
+					statement:
+						'INSERT INTO Segments(SegmentID,CameraID,FileName,Start,End) VALUES(?,?,?,?,?)',
+					params: [generateUUID(), cameraID, FileName, Start, End]
+				});
+			}
+		});
+	};
+
+	respawn(
+		childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
 	);
 
-	Process.stdio[1].pipe(MP4F);
-	Process.stdio[3].on('data', (FN) => {
-		if (Processors[cameraID] !== undefined) {
-			const FileName = FN.toString().trim().replace(/\n/g, '');
-			const Start = dayjs(
-				FileName.replace(/.mp4/g, ''),
-				'YYYY-MM-DDTHH-mm-ss'
-			).unix();
-			const End = dayjs().unix();
-			const STMT = SQL.prepare(
-				'INSERT INTO Segments(SegmentID,CameraID,FileName,Start,End) VALUES(?,?,?,?,?)'
-			);
-			STMT.run([generateUUID(), cameraID, FileName, Start, End]);
-			STMT.finalize();
-		}
-	});
-
-	const IOptions = {
-		path: '/streams/' + cameraID
-	};
-	const Socket = io(HTTP, IOptions);
-
-	MP4F.on('segment', (data) => {
-		Socket.sockets.sockets.forEach((ClientSocket) => {
-			ClientSocket.emit('segment', data);
-		});
-	});
-
-	Socket.on('connection', (ClientSocket) => {
-		ClientSocket.emit('segment', MP4F.initialization);
-	});
-
 	Processors[cameraID] = {
-		CameraInfo: Cam,
-		Socket: Socket,
-		FFMPEG: Process,
-		MP4Frag: MP4F
+		CameraInfo: Cam
 	};
 }
 function generateUUID() {
@@ -440,19 +475,24 @@ async function purgeContinuous() {
 	console.log(' - Purging data.');
 	const Date = dayjs().subtract(config.system.continuousDays, 'day').unix();
 	const STMT = SQL.prepare('SELECT * FROM Segments WHERE Start <= ?');
-	STMT.all([Date], function (err, rows) {
+	STMT.all([Date], (err, rows) => {
 		rows.forEach((S) => {
 			fs.unlinkSync(
 				path.join(
 					config.system.storageVolume,
-					'cameras',
+					'NVRJS_CAMERA_RECORDINGS',
 					S.CameraID,
 					S.FileName
 				)
 			);
 		});
-		SQL.run(`DELETE FROM Segments WHERE Start <= ${Date}`, function () {
-			SQL.run(`DELETE FROM Events WHERE Date <= ${Date}`);
+		FIFO.enqueue({
+			statement: `DELETE FROM Segments WHERE Start <= ${Date}`,
+			params: []
+		});
+		FIFO.enqueue({
+			statement: `DELETE FROM Events WHERE Date <= ${Date}`,
+			params: []
 		});
 	});
 }

@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>NVR JS : Dashboard</title>
+    <meta name="theme-color" content="#006666">
   <!--Style-->
 <link rel="stylesheet" href="static/css/default.css" />
 <link rel="stylesheet" href="static/css/font-awesome.min.css">
@@ -27,25 +28,40 @@
 <script src="static/js/socket.io.min.js"></script>
   </head>
   <body>
+    <div class="topPanel">
+      <img src="static/images/LogoSmall.png" style="margin-top: 30px;">
+      <table style="float: right; height: 100%;">
+        <tr>
+          <td style="vertical-align: middle;">
+            <img src="static/images/CPU.png" style="width: 28px;">
+          </td>
+          <td style="vertical-align: middle;" id="CPU">
+           &nbsp;
+          </td>
+          <td style="vertical-align: middle;">
+            &nbsp;&nbsp;&nbsp;
+          </td>
+          <td style="vertical-align: middle;">
+            <img src="static/images/RAM.png" style="width: 28px;">
+          </td>
+          <td style="vertical-align: middle;" id="RAM">
+            &nbsp;
+          </td>
+          <td style="vertical-align: middle;">
+            &nbsp;&nbsp;&nbsp;
+          </td>
+          <td style="vertical-align: middle;">
+            <img src="static/images/HDD.png" style="width: 28px;">
+          </td>
+          <td style="vertical-align: middle;" id="DISK">
+            &nbsp;
+          </td>
+        </tr>
+      </table>
+
+    </div>
     <div class="sideBar">
-      <div class="cameraPanel" style="height: 110px;background-color: transparent;">
-        <div class="title">System</div>
-        <table style="width: 100%;">
-          <tr>
-            <td style="text-align: left;">CPU</td>
-            <td style="text-align:right;" id="CPU"></td>
-          </tr>
-          <tr>
-            <td style="text-align: left;">RAM</td>
-            <td style="text-align:right;" id="RAM"></td>
-          </tr>
-          <tr>
-            <td style="text-align: left;">Disk</td>
-            <td style="text-align:right;" id="DISK"></td>
-          </tr>
-        </table>
-      </div>
-      <hr />
+     
       {{#each cameras}}
       <div class="cameraPanel">
         <div class="title">{{this.name}}</div>

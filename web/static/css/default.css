@@ -26,13 +26,13 @@ body {
 	-webkit-border-radius: 8px;
 	-moz-border-radius: 8px;
 	border-radius: 8px;
-	border-color: #006666;
+	border-color: #3b5998;
 	border-width: 2px;
 	border-style: solid;
 	-webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
 	-moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
-	background-color: whitesmoke;
+	background-color: rgb(235,235,235);
 }
 
 .floatingDiv .title {
@@ -41,11 +41,11 @@ body {
 	line-height: 30px;
 	padding-left: 5px;
 	color: white;
-	background-color: #006666;
+	background-color: #3b5998;
 }
 
 input[type='button'] {
-	background-color: #006666;
+	background-color: #3b5998;
 	color: white;
 	border: none;
 	padding: 5px;
@@ -57,7 +57,7 @@ input[type='button'] {
 input[type='password'] {
 	border-style: solid;
 	border-width: 1px;
-	border-color: #006666;
+	border-color: #3b5998;
 	border-spacing: 10px;
 	border-radius: 4px;
 	height: 20px;
@@ -68,10 +68,10 @@ input[type='password'] {
 	padding-right: 30px;
   padding-left: 30px;
 	box-sizing: border-box;
-  background-color: #006666;
+  background-color: #3b5998;
   height: 100px;
   border: none;
-	border-bottom-color: #006666;
+	border-bottom-color: #3b5998;
 	border-bottom-width: 3px;
 	border-bottom-style: solid;
   -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
@@ -84,10 +84,10 @@ input[type='password'] {
 	width: 270px;
 	height: calc(100% - 120px);
 	border: none;
-	border-right-color: #006666;
+	border-right-color: #3b5998;
 	border-right-width: 3px;
 	border-right-style: solid;
-	background-color: whitesmoke;
+	background-color: rgb(235,235,235);
 	-webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
 	-moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
@@ -97,7 +97,7 @@ input[type='password'] {
 
 .sideBar .cameraPanel {
 	width: 90%;
-	border-color: #006666;
+	border-color: #3b5998;
 	border-style: solid;
 	height: 130px;
 	border-width: 2px;
@@ -121,7 +121,7 @@ input[type='password'] {
 	padding-left: 5px;
 	font-family: Roboto;
 	color: white;
-	background-color: #006666;
+	background-color: #3b5998;
 
 }
 
@@ -156,7 +156,7 @@ input[type='password'] {
 }
 
 .ui-widget.ui-widget-content{
-	border: 2px solid #006666 !important;
+	border: 2px solid #3b5998 !important;
 	overflow: hidden !important;
 	-webkit-border-radius: 6px;
 	-moz-border-radius: 6px;
@@ -169,7 +169,7 @@ input[type='password'] {
 
 .ui-widget-header{
 	border: none !important;
-	background: #006666 !important;
+	background: #3b5998 !important;
 	color: white !important;
 	font-weight: normal !important;
 	border-radius: 0px !important;

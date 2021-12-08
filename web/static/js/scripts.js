@@ -15,8 +15,8 @@ function StartStats() {
 			dataType: 'json',
 			success: function (data) {
 				$('#CPU').html(data.CPU + '%');
-				$('#RAM').html(data.MEM.usedMemPercentage+'%');
-				$('#DISK').html(data.DISK.usedPercentage+'%');
+				$('#RAM').html(data.MEM.usedMemPercentage + '%');
+				$('#DISK').html(data.DISK.usedPercentage + '%');
 			}
 		});
 	};

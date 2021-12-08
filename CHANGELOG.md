@@ -3,9 +3,13 @@
   - 2.0.0
 
     **Breaking Changes**
-     - NVR system folders have been renamed. rename them to continue with your current data.
+     - NVR system folders have been renamed. rename them to continue with your current data.  
        system  -> NVRJS_SYSTEM  
        cameras -> NVRJS_CAMERA_RECORDINGS
+
+    **Fixes**
+     - Fix for unsecured live socket stream.
+
 
     **Changes**
      - Depednancy updates 

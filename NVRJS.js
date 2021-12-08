@@ -1,5 +1,6 @@
 const express = require('express');
 const cookieparser = require('cookie-parser');
+const cookie = require('cookie');
 const bcrypt = require('bcrypt');
 const http = require('http');
 const io = require('socket.io');
@@ -41,11 +42,19 @@ if (!fs.existsSync(config.system.storageVolume)) {
 	process.exit();
 } else {
 	try {
-		if (!fs.existsSync(path.join(config.system.storageVolume, 'NVRJS_SYSTEM'))) {
+		if (
+			!fs.existsSync(path.join(config.system.storageVolume, 'NVRJS_SYSTEM'))
+		) {
 			fs.mkdirSync(path.join(config.system.storageVolume, 'NVRJS_SYSTEM'));
 		}
-		if (!fs.existsSync(path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS'))) {
-			fs.mkdirSync(path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS'));
+		if (
+			!fs.existsSync(
+				path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS')
+			)
+		) {
+			fs.mkdirSync(
+				path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS')
+			);
 		}
 	} catch (e) {
 		console.log('Error creating system directories.');
@@ -272,7 +281,11 @@ Cameras.forEach((cameraID) => {
 });
 
 function CreateOrConnectSQL(CB) {
-	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', 'data.db');
+	const Path = path.join(
+		config.system.storageVolume,
+		'NVRJS_SYSTEM',
+		'data.db'
+	);
 
 	if (!fs.existsSync(Path)) {
 		console.log(' - Creating db structure.');
@@ -330,13 +343,21 @@ function InitCamera(Cam, cameraID) {
 		'/segments/' + cameraID,
 		CheckAuthMW,
 		express.static(
-			path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS', cameraID),
+			path.join(
+				config.system.storageVolume,
+				'NVRJS_CAMERA_RECORDINGS',
+				cameraID
+			),
 			{ acceptRanges: true }
 		)
 	);
 
 	if (Cam.continuous !== undefined && Cam.continuous) {
-		let Path = path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS', cameraID);
+		let Path = path.join(
+			config.system.storageVolume,
+			'NVRJS_CAMERA_RECORDINGS',
+			cameraID
+		);
 		if (!fs.existsSync(Path)) {
 			fs.mkdirSync(Path);
 		}
@@ -349,7 +370,7 @@ function InitCamera(Cam, cameraID) {
 		CommandArgs.push('copy');
 		CommandArgs.push('-f');
 		CommandArgs.push('segment');
-        CommandArgs.push('-movflags');
+		CommandArgs.push('-movflags');
 		CommandArgs.push('+faststart');
 		CommandArgs.push('-segment_atclocktime');
 		CommandArgs.push('1');
@@ -387,7 +408,9 @@ function InitCamera(Cam, cameraID) {
 		};
 		const Socket = io(HTTP, IOptions);
 		Socket.on('connection', (ClientSocket) => {
-			ClientSocket.emit('segment', MP4F.initialization);
+			if (CheckAuthMW(ClientSocket)) {
+				ClientSocket.emit('segment', MP4F.initialization);
+			}
 		});
 
 		MP4F.on('segment', (data) => {
@@ -397,21 +420,22 @@ function InitCamera(Cam, cameraID) {
 		});
 
 		Spawned.on('close', () => {
-			console.log(' - Camera: ' + Cam.name + ' was terminated, respawning after 10 seconds...');
+			console.log(
+				' - Camera: ' +
+					Cam.name +
+					' was terminated, respawning after 10 seconds...'
+			);
 			Spawned.kill();
 			MP4F.destroy();
-			setTimeout(()=>{
+			setTimeout(() => {
 				respawn(
 					childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
 				);
-			},10000)
-			
+			}, 10000);
 		});
 
-
-
-		Spawned.stdio[3].on('data',(data) =>{
-			MP4F.write(data,'binary');
+		Spawned.stdio[3].on('data', (data) => {
+			MP4F.write(data, 'binary');
 		});
 		//Spawned.stdio[1].pipe(MP4F);
 		Spawned.stdio[4].on('data', (FN) => {
@@ -460,14 +484,33 @@ function generateUUID() {
 }
 
 function CheckAuthMW(req, res, next) {
-	if (
-		req.signedCookies.Authentication === undefined ||
-		req.signedCookies.Authentication !== 'Success'
-	) {
-		res.status(401);
-		res.end();
+	if (res === undefined && next === undefined) {
+		if (req.handshake.headers.cookie !== undefined) {
+			const CS = cookie.parse(req.handshake.headers.cookie);
+			const Signed = cookieparser.signedCookies(CS, config.system.cookieKey);
+			if (
+				Signed.Authentication === undefined ||
+				Signed.Authentication !== 'Success'
+			) {
+				req.disconnect();
+				return false;
+			} else {
+				return true;
+			}
+		} else {
+			req.disconnect();
+			return false;
+		}
 	} else {
-		next();
+		if (
+			req.signedCookies.Authentication === undefined ||
+			req.signedCookies.Authentication !== 'Success'
+		) {
+			res.status(401);
+			res.end();
+		} else {
+			next();
+		}
 	}
 }
 

@@ -44,9 +44,9 @@ module.exports = {
 		/* Username */
 		username: "admin",
 		/* bcrypt password (default: admin) */
-		password: '$2a$10$DP3jIaujOnmDjp7XRqiYsOs19Qp0VGZBm9JuW1fSHHgB24HdtVR.q',
+		password: '$2a$10$CnOx/6vFY2ehRDf68yqd..aLlv0UM.zeBLKnRjuU8YykCsC2Ap3iG',
 		/* bcrypt API Key (default: x7Te9m38JHQq6ddv) */
-		apiKey: "$2a$10$kaUfFkKLewaXRWPs9u14DuddHmcFX.AD5hnzp1ngOE7hrVaZ22xem",
+		apiKey: '$2a$10$N53ci.EIQ7JCu6u1HlOjoO//W0Bmp3GrRruyK1Jysr01CQ1rDrVQK',
 		/* Any random string */
 		cookieKey: 'f3gi6FLhIPVV31d1TBQUPEAngrI3wAoP',
 		interfacePort: 7878,

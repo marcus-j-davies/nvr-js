@@ -112,9 +112,55 @@ Object.keys(Pages).forEach((PS) => {
 	CompiledPages[PS] = handlebars.compile(fs.readFileSync(Pages[PS], 'utf8'));
 });
 
+// Static
 App.use('/static', express.static(path.join(__dirname, 'web', 'static')));
 
+// UI
+App.get('/', (req, res) => {
+	res.type('text/html');
+	res.status(200);
+	res.end(CompiledPages.Index());
+});
+App.post('/login', (req, res) => {
+	const Data = req.body;
+	const Password = Data.password;
+	const Username = Data.username;
+
+	if (
+		bcrypt.compareSync(Password, config.system.password) &&
+		config.system.username === Username
+	) {
+		res.cookie('Authentication', 'Success', {
+			signed: true
+		});
+		res.status(204);
+		res.end();
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
+
+App.get('/dashboard', CheckAuthMW, (req, res) => {
+	res.type('text/html');
+	res.status(200);
+	res.end(CompiledPages.Dash(config));
+});
+
+// System Info
+App.get('/api/:APIKey/systeminfo', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		getSystemInfo(req, res);
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
 App.get('/systeminfo', CheckAuthMW, (req, res) => {
+	getSystemInfo(req, res);
+});
+
+function getSystemInfo(req, res) {
 	osu.cpu.usage().then((CPU) => {
 		osu.drive.info(config.system.storageVolume).then((DISK) => {
 			osu.mem.info().then((MEM) => {
@@ -129,114 +175,30 @@ App.get('/systeminfo', CheckAuthMW, (req, res) => {
 			});
 		});
 	});
-});
+}
 
-App.get('/', (req, res) => {
-	res.type('text/html');
-	res.status(200);
-	res.end(CompiledPages.Index());
-});
-App.post('/login', (req, res) => {
-	const Data = req.body;
-	const Password = Data.password;
+// get Cameras
+App.get('/api/:APIKey/cameras', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		const Cams = [];
 
-	if (bcrypt.compareSync(Password, config.system.password)) {
-		res.cookie('Authentication', 'Success', {
-			signed: true
+		Object.keys(config.cameras).forEach((ID) => {
+			const Cam = config.cameras[ID];
+			Cams.push({ id: ID, name: Cam.name, continuous: Cam.continuous });
 		});
-		res.status(204);
-		res.end();
+
+		res.type('application/json');
+		res.status(200);
+		res.end(JSON.stringify(Cams));
 	} else {
 		res.status(401);
 		res.end();
 	}
 });
-App.get('/dashboard', CheckAuthMW, (req, res) => {
-	res.type('text/html');
-	res.status(200);
-	res.end(CompiledPages.Dash(config));
-});
 
-App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
-	const Data = {};
-
-	let STMT = SQL.prepare(
-		'SELECT * FROM Segments WHERE CameraID = ? AND Start >= ? AND End <= ?'
-	);
-	STMT.all(
-		[req.params.CameraID, parseInt(req.params.Start), parseInt(req.params.End)],
-		(err, rows) => {
-			Data.segments = rows;
-			STMT.finalize();
-			STMT = SQL.prepare(
-				'SELECT * FROM Events WHERE CameraID = ? AND Date >= ? AND Date <= ?'
-			);
-			STMT.all(
-				[
-					req.params.CameraID,
-					parseInt(req.params.Start),
-					parseInt(req.params.End)
-				],
-				(err, rows) => {
-					Data.events = rows;
-					STMT.finalize();
-					res.type('application/json');
-					res.status(200);
-					res.end(JSON.stringify(Data));
-				}
-			);
-		}
-	);
-});
-
-App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
-	const CommandArgs = [];
-	const Cam = config.cameras[req.params.CameraID];
-
-	Object.keys(Cam.inputConfig).forEach((inputConfigKey) => {
-		CommandArgs.push('-' + inputConfigKey);
-		if (Cam.inputConfig[inputConfigKey].length > 0) {
-			CommandArgs.push(Cam.inputConfig[inputConfigKey]);
-		}
-	});
-
-	CommandArgs.push('-i');
-	CommandArgs.push(Cam.input);
-	CommandArgs.push('-vf');
-	CommandArgs.push('scale=' + req.params.Width + ':-1');
-	CommandArgs.push('-vframes');
-	CommandArgs.push('1');
-	CommandArgs.push('-f');
-	CommandArgs.push('image2');
-	CommandArgs.push('-');
-
-	const Process = childprocess.spawn(
-		config.system.ffmpegLocation,
-		CommandArgs,
-		{ env: process.env, stderr: 'ignore' }
-	);
-
-	let imageBuffer = Buffer.alloc(0);
-
-	Process.stdout.on('data', function (data) {
-		imageBuffer = Buffer.concat([imageBuffer, data]);
-	});
-
-	Process.on('exit', (Code, Signal) => {
-		const _Error = FFMPEGExitDueToError(Code, Signal);
-		if (!_Error) {
-			res.type('image/jpeg');
-			res.status(200);
-			res.end(Buffer.from(imageBuffer, 'binary'));
-		} else {
-			res.status(500);
-			res.end();
-		}
-	});
-});
-
-App.post('/event/:Password/:CameraID', (req, res) => {
-	if (bcrypt.compareSync(req.params.Password, config.system.password)) {
+// Event Creation
+App.post('/api/:APIKey/event/:CameraID', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
 		if (config.cameras[req.params.CameraID].continuous) {
 			if (!SensorTimestamps.hasOwnProperty(req.body.sensorId)) {
 				FIFO.enqueue({
@@ -260,9 +222,10 @@ App.post('/event/:Password/:CameraID', (req, res) => {
 				}, 1000 * config.system.eventSensorIdCoolOffSeconds);
 
 				return;
+			} else {
+				res.status(429);
+				res.end();
 			}
-			res.status(429);
-			res.end();
 		} else {
 			res.status(501);
 			res.end();
@@ -272,6 +235,159 @@ App.post('/event/:Password/:CameraID', (req, res) => {
 		res.end();
 	}
 });
+
+// Snapshot
+App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
+	getSnapShot(res, req.params.CameraID, req.params.Width);
+});
+
+App.get('/api/:APIKey/snapshot/:CameraID/:Width', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		getSnapShot(res, req.params.CameraID, req.params.Width);
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
+
+function getSnapShot(Res, CameraID, Width) {
+	const CommandArgs = [];
+	const Cam = config.cameras[CameraID];
+
+	Object.keys(Cam.inputConfig).forEach((inputConfigKey) => {
+		CommandArgs.push('-' + inputConfigKey);
+		if (Cam.inputConfig[inputConfigKey].length > 0) {
+			CommandArgs.push(Cam.inputConfig[inputConfigKey]);
+		}
+	});
+
+	CommandArgs.push('-i');
+	CommandArgs.push(Cam.input);
+	CommandArgs.push('-vf');
+	CommandArgs.push('scale=' + Width + ':-1');
+	CommandArgs.push('-vframes');
+	CommandArgs.push('1');
+	CommandArgs.push('-f');
+	CommandArgs.push('image2');
+	CommandArgs.push('-');
+
+	const Process = childprocess.spawn(
+		config.system.ffmpegLocation,
+		CommandArgs,
+		{ env: process.env, stderr: 'ignore' }
+	);
+
+	let imageBuffer = Buffer.alloc(0);
+
+	Process.stdout.on('data', function (data) {
+		imageBuffer = Buffer.concat([imageBuffer, data]);
+	});
+
+	Process.on('exit', (Code, Signal) => {
+		const _Error = FFMPEGExitDueToError(Code, Signal);
+		if (!_Error) {
+			Res.type('image/jpeg');
+			Res.status(200);
+			Res.end(Buffer.from(imageBuffer, 'binary'));
+		} else {
+			Res.status(500);
+			Res.end();
+		}
+	});
+}
+
+/*
+// HLS M3U8
+App.get('/api/:APIKey/stream/:CameraID/m3u8', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		res.type('application/x-mpegURL');
+		res.status(200);
+		res.sendFile(
+			path.join(
+				config.system.storageVolume,
+				'NVRJS_CAMERA_RECORDINGS',
+				req.params.CameraID,
+				'api_stream.m3u8'
+			)
+		);
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
+
+// HLS FMP4
+App.get('/api/:APIKey/stream/:CameraID/init.mp4', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		res.type('video/mp4');
+		res.status(200);
+		res.sendFile(
+			path.join(
+				config.system.storageVolume,
+				'NVRJS_CAMERA_RECORDINGS',
+				req.params.CameraID,
+				'init.mp4'
+			)
+		);
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
+App.get('/api/:APIKey/stream/:CameraID/:File', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		res.type('video/mp4');
+		res.status(200);
+		res.sendFile(
+			path.join(
+				config.system.storageVolume,
+				'NVRJS_CAMERA_RECORDINGS',
+				req.params.CameraID,
+				req.params.File
+			)
+		);
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
+*/
+
+// Get Event Data
+App.get('/api/:APIKey/geteventdata/:CameraID/:Start/:End', (req, res) => {
+	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
+		GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
+	} else {
+		res.status(401);
+		res.end();
+	}
+});
+
+App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
+	GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
+});
+
+function GetEventData(res, CameraID, Start, End) {
+	const Data = {};
+
+	let STMT = SQL.prepare(
+		'SELECT * FROM Segments WHERE CameraID = ? AND Start >= ? AND End <= ?'
+	);
+	STMT.all([CameraID, parseInt(Start), parseInt(End)], (err, rows) => {
+		Data.segments = rows;
+		STMT.finalize();
+		STMT = SQL.prepare(
+			'SELECT * FROM Events WHERE CameraID = ? AND Date >= ? AND Date <= ?'
+		);
+		STMT.all([CameraID, parseInt(Start), parseInt(End)], (err, rows) => {
+			Data.events = rows;
+			STMT.finalize();
+			res.type('application/json');
+			res.status(200);
+			res.end(JSON.stringify(Data));
+		});
+	});
+}
 
 const Processors = {};
 const Cameras = Object.keys(config.cameras);
@@ -352,18 +468,16 @@ function InitCamera(Cam, cameraID) {
 		)
 	);
 
+	const Path = path.join(
+		config.system.storageVolume,
+		'NVRJS_CAMERA_RECORDINGS',
+		cameraID
+	);
+	if (!fs.existsSync(Path)) {
+		fs.mkdirSync(Path);
+	}
+
 	if (Cam.continuous !== undefined && Cam.continuous) {
-		let Path = path.join(
-			config.system.storageVolume,
-			'NVRJS_CAMERA_RECORDINGS',
-			cameraID
-		);
-		if (!fs.existsSync(Path)) {
-			fs.mkdirSync(Path);
-		}
-
-		Path = path.join(Path, '%Y-%m-%dT%H-%M-%S.mp4');
-
 		CommandArgs.push('-c:v');
 		CommandArgs.push('copy');
 		CommandArgs.push('-c:a');
@@ -382,7 +496,7 @@ function InitCamera(Cam, cameraID) {
 		CommandArgs.push('pipe:4');
 		CommandArgs.push('-segment_time');
 		CommandArgs.push(60 * config.system.continuousSegTimeMinutes);
-		CommandArgs.push(Path);
+		CommandArgs.push(path.join(Path, '%Y-%m-%dT%H-%M-%S.mp4'));
 	}
 
 	Object.keys(Cam.liveConfig.streamConfig).forEach((streamingConfigKey) => {
@@ -395,6 +509,28 @@ function InitCamera(Cam, cameraID) {
 	CommandArgs.push('-metadata');
 	CommandArgs.push('title="NVR JS Stream"');
 	CommandArgs.push('pipe:3');
+	
+	/*
+	CommandArgs.push('-c:v');
+	CommandArgs.push('copy');
+	CommandArgs.push('-c:a');
+	CommandArgs.push('copy');
+	CommandArgs.push('-f');
+	CommandArgs.push('hls');
+	CommandArgs.push('-hls_segment_type')
+	CommandArgs.push('fmp4')
+	CommandArgs.push('-hls_allow_cache')
+	CommandArgs.push('0')
+	CommandArgs.push('-hls_time');
+	CommandArgs.push('4');
+	CommandArgs.push('-hls_list_size');
+	CommandArgs.push('2');
+	CommandArgs.push('-hls_flags');
+	CommandArgs.push('delete_segments');
+	CommandArgs.push('-hls_segment_filename');
+	CommandArgs.push(path.join(Path, 'hls%03d.mp4'));
+	CommandArgs.push(path.join(Path, 'api_stream.m3u8'));
+	*/
 
 	const Options = {
 		detached: true,
@@ -437,7 +573,6 @@ function InitCamera(Cam, cameraID) {
 		Spawned.stdio[3].on('data', (data) => {
 			MP4F.write(data, 'binary');
 		});
-		//Spawned.stdio[1].pipe(MP4F);
 		Spawned.stdio[4].on('data', (FN) => {
 			if (Processors[cameraID] !== undefined) {
 				const FileName = FN.toString().trim().replace(/\n/g, '');

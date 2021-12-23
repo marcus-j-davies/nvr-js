@@ -1,8 +1,12 @@
 module.exports = {
 	/* System Settings */
 	system: {
+		/* Username */
+		username: "admin",
 		/* bcrypt password (default: admin) */
 		password: '$2a$10$DP3jIaujOnmDjp7XRqiYsOs19Qp0VGZBm9JuW1fSHHgB24HdtVR.q',
+		/* bcrypt API Key (default: x7Te9m38JHQq6ddv) */
+		apiKey: "$2a$10$kaUfFkKLewaXRWPs9u14DuddHmcFX.AD5hnzp1ngOE7hrVaZ22xem",
 		/* Any random string */
 		cookieKey: 'f3gi6FLhIPVV31d1TBQUPEAngrI3wAoP',
 		interfacePort: 7878,

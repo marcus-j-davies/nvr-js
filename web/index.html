@@ -32,12 +32,19 @@
     <div class="floatingDiv">
         <div class="title">Login</div>
         <img src="static/images/Logo.png" style="display: block;margin: auto; margin-top: 30px;">
-        <table style="width: 50px; margin: auto; margin-top: 30px;">
+        <table style="width: 50px; margin: auto; margin-bottom: 20px;">
+            <tr>
+                <td>Username: </td>
+                <td><input type="text" id="Username"></td>
+            </tr>
             <tr>
                 <td>Password: </td>
                 <td><input type="password" id="Password"></td>
-                <td><input type="button" value="Login" onclick="Login()"></td>
             </tr>
+            <tr>
+                <td colspan="3" style="text-align: right;"><input type="button" value="Login" onclick="Login()"></td>
+            </tr>
+          
         </table>
     </div>
 

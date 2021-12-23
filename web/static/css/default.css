@@ -54,7 +54,7 @@ input[type='button'] {
 	-moz-border-radius: 4px;
 	border-radius: 4px;
 }
-input[type='password'] {
+input[type='password'], input[type='text'] {
 	border-style: solid;
 	border-width: 1px;
 	border-color: #3b5998;

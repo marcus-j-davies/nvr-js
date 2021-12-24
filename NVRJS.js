@@ -16,6 +16,7 @@ const dayjs = require('dayjs');
 const queue = require('queue-fifo');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
+const RateLimiter = require('express-rate-limit');
 
 console.log(' - Checking config.');
 if (!fs.existsSync(path.join(os.homedir(), 'nvrjs.config.js'))) {
@@ -96,8 +97,14 @@ function Commit() {
 }
 setTimeout(Commit, 10000);
 
+const IOLimiter = RateLimiter({
+	windowMs: 5000,
+	max: 20
+});
+
 console.log(' - Creating express application.');
 const App = new express();
+App.use(IOLimiter);
 App.use(express.json());
 App.use(cookieparser(config.system.cookieKey));
 const HTTP = new http.Server(App);
@@ -296,63 +303,6 @@ function getSnapShot(Res, CameraID, Width) {
 	});
 }
 
-/*
-// HLS M3U8
-App.get('/api/:APIKey/stream/:CameraID/m3u8', (req, res) => {
-	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
-		res.type('application/x-mpegURL');
-		res.status(200);
-		res.sendFile(
-			path.join(
-				config.system.storageVolume,
-				'NVRJS_CAMERA_RECORDINGS',
-				req.params.CameraID,
-				'api_stream.m3u8'
-			)
-		);
-	} else {
-		res.status(401);
-		res.end();
-	}
-});
-
-// HLS FMP4
-App.get('/api/:APIKey/stream/:CameraID/init.mp4', (req, res) => {
-	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
-		res.type('video/mp4');
-		res.status(200);
-		res.sendFile(
-			path.join(
-				config.system.storageVolume,
-				'NVRJS_CAMERA_RECORDINGS',
-				req.params.CameraID,
-				'init.mp4'
-			)
-		);
-	} else {
-		res.status(401);
-		res.end();
-	}
-});
-App.get('/api/:APIKey/stream/:CameraID/:File', (req, res) => {
-	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
-		res.type('video/mp4');
-		res.status(200);
-		res.sendFile(
-			path.join(
-				config.system.storageVolume,
-				'NVRJS_CAMERA_RECORDINGS',
-				req.params.CameraID,
-				req.params.File
-			)
-		);
-	} else {
-		res.status(401);
-		res.end();
-	}
-});
-*/
-
 // Get Event Data
 App.get('/api/:APIKey/geteventdata/:CameraID/:Start/:End', (req, res) => {
 	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
@@ -509,28 +459,6 @@ function InitCamera(Cam, cameraID) {
 	CommandArgs.push('-metadata');
 	CommandArgs.push('title="NVR JS Stream"');
 	CommandArgs.push('pipe:3');
-	
-	/*
-	CommandArgs.push('-c:v');
-	CommandArgs.push('copy');
-	CommandArgs.push('-c:a');
-	CommandArgs.push('copy');
-	CommandArgs.push('-f');
-	CommandArgs.push('hls');
-	CommandArgs.push('-hls_segment_type')
-	CommandArgs.push('fmp4')
-	CommandArgs.push('-hls_allow_cache')
-	CommandArgs.push('0')
-	CommandArgs.push('-hls_time');
-	CommandArgs.push('4');
-	CommandArgs.push('-hls_list_size');
-	CommandArgs.push('2');
-	CommandArgs.push('-hls_flags');
-	CommandArgs.push('delete_segments');
-	CommandArgs.push('-hls_segment_filename');
-	CommandArgs.push(path.join(Path, 'hls%03d.mp4'));
-	CommandArgs.push(path.join(Path, 'api_stream.m3u8'));
-	*/
 
 	const Options = {
 		detached: true,

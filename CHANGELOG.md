@@ -12,10 +12,14 @@
        Add a new value named **username** in the **system** section to set it - this should be plain text
 
     **Changes**
-     - Depednancy updates 
+     - Dependency updates.
      - Clean/polish up the UI.
-     - Re-worked ffmpeg stream pipes
-     - SQL data writes are now queued
+     - Re-worked ffmpeg stream pipes.
+     - SQL data writes are now queued.
+     - Rate Limiting is now applied to thr the HTTP application.
+
+    **Changes**
+     - New API Endpoints
 
   - 1.0.2
 

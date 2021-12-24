@@ -98,8 +98,8 @@ function Commit() {
 setTimeout(Commit, 10000);
 
 const IOLimiter = RateLimiter({
-	windowMs: 5000,
-	max: 20
+	windowMs: 2000,
+	max: 100
 });
 
 console.log(' - Creating express application.');

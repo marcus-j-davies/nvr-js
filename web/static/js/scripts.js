@@ -1,9 +1,5 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
-(function () {
-	dayjs.extend(window.dayjs_plugin_customParseFormat);
-});
-
 const SearchTimebufferHours = 2;
 let Segments = [];
 
@@ -146,11 +142,13 @@ function LoadAndPosition(Timeline, Date, Copy, ID) {
 	}
 }
 
+function EventSort(a, b) {
+	return a.Start - b.Start;
+}
+
 function GetSegmentsAndEvents(Timeline, DataSet, Start, End, ID) {
 	$.getJSON('/geteventdata/' + ID + '/' + Start + '/' + End, function (data) {
-		data.segments.sort((a, b) => {
-			a.Start - b.Start;
-		});
+		data.segments.sort(EventSort);
 		Segments = data.segments;
 
 		DataSet.clear();

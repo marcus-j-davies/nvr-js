@@ -41,8 +41,12 @@ it will then terminate allowing you to start adjusting your system, before start
 module.exports = {
 	/* System Settings */
 	system: {
+		/* Username */
+		username: "admin",
 		/* bcrypt password (default: admin) */
-		password: '$2a$10$DP3jIaujOnmDjp7XRqiYsOs19Qp0VGZBm9JuW1fSHHgB24HdtVR.q',
+		password: '$2a$10$CnOx/6vFY2ehRDf68yqd..aLlv0UM.zeBLKnRjuU8YykCsC2Ap3iG',
+		/* bcrypt API Key (default: x7Te9m38JHQq6ddv) */
+		apiKey: '$2a$10$N53ci.EIQ7JCu6u1HlOjoO//W0Bmp3GrRruyK1Jysr01CQ1rDrVQK',
 		/* Any random string */
 		cookieKey: 'f3gi6FLhIPVV31d1TBQUPEAngrI3wAoP',
 		interfacePort: 7878,
@@ -68,7 +72,8 @@ module.exports = {
 				fflags: '+igndts',
 				analyzeduration: '1000000',
 				probesize: '1000000',
-				rtsp_transport: 'tcp'
+				rtsp_transport: 'tcp',
+				stimeout: '30000000'
 			},
 			/* Input Address */
 			input: 'rtsp://user:password@ip:port/live0',
@@ -76,7 +81,7 @@ module.exports = {
 			/* Disabling continuous recording, will disable the ability to create events */
 			continuous: true,
 			/* Live streaming config */
-			/* These settings should be good enough for a low delay live stream, providing your camera produces h264 frames */ 
+			/* These settings should be good enough for a low delay live stream, providing your camera produces h264 frames */
 			/* streaming is achieved with websockets and MP4 fragments */
 			liveConfig: {
 				codecString: 'video/mp4; codecs="avc1.64001f"',

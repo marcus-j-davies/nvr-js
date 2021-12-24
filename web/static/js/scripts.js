@@ -15,10 +15,8 @@ function StartStats() {
 			dataType: 'json',
 			success: function (data) {
 				$('#CPU').html(data.CPU + '%');
-				$('#RAM').html(
-					data.MEM.usedMemMb + 'MB / ' + data.MEM.totalMemMb + 'MB'
-				);
-				$('#DISK').html(data.DISK.usedGb + 'GB / ' + data.DISK.totalGb + 'GB');
+				$('#RAM').html(data.MEM.usedMemPercentage + '%');
+				$('#DISK').html(data.DISK.usedPercentage + '%');
 			}
 		});
 	};
@@ -268,7 +266,8 @@ function goFullscreen(element) {
 
 function Login() {
 	const Data = {
-		password: $('#Password').val()
+		password: $('#Password').val(),
+		username: $('#Username').val()
 	};
 	$.ajax({
 		type: 'POST',
@@ -277,6 +276,9 @@ function Login() {
 		contentType: 'application/json; charset=utf-8',
 		success: function () {
 			document.location = '/dashboard';
+		},
+		error: function () {
+			alert('Could not login. This may be due to incorrect login details');
 		}
 	});
 }

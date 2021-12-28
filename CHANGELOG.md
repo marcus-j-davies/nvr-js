@@ -9,7 +9,8 @@
      - API Access no longer uses the UI password, it uses its own API key, as configured in the config file.  
        Add a new value named **apiKey** in the **system** section - this should be a bcript value of your chosen API key
      - Username is now requied in the login page.  
-       Add a new value named **username** in the **system** section to set it - this should be plain text
+       Add a new value named **username** in the **system** section to set it - this should be plain text  
+     - API is now accessed via the /api/ URI
 
     **Changes**
      - Dependency updates.

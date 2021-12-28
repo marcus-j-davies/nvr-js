@@ -17,10 +17,14 @@
      - Clean/polish up the UI.
      - Re-worked ffmpeg stream pipes.
      - SQL data writes are now queued.
-     - Rate Limiting is now applied to thr the HTTP application.
+     - Rate Limiting is now applied to the the HTTP application.
 
-    **Changes**
-     - New API Endpoints
+    **New Features**
+     - New API functions (URI's)
+       - **/systeminfo**  
+       - **/cameras**  
+       - **/snapshot/:CameraID/:Width**  
+       - **/geteventdata/:CameraID/:Start/:End**  
 
   - 1.0.2
 

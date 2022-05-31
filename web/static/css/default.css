@@ -82,7 +82,7 @@ input[type='password'], input[type='text'] {
 
 .topPanel .stats {
 	position: absolute;
-	right: 0;
+	right: 16px;
 	top: 0;
 	display: block;
 	height: 48px;
@@ -95,20 +95,20 @@ input[type='password'], input[type='text'] {
 	font-size: 18px;
 	font-weight: bold;
 	text-align: right;
-	background-position: top left;
+	background-position: top center;
 	background-repeat: no-repeat;
-	background-size: 24px 24px;
+	background-size: 19px 19px;
 	padding-top: 24px;
 	line-height: 24px;
 }
 .topPanel .stats .cell#CPU {
-	background-image: url(../static/images/CPU.png);
+	background-image: url(../images/CPU.png);
 }
 .topPanel .stats .cell#RAM {
-	background-image: url(../static/images/RAM.png);
+	background-image: url(../images/RAM.png);
 }
 .topPanel .stats .cell#DISK {
-	background-image: url(../static/images/HDD.png);
+	background-image: url(../images/HDD.png);
 }
 
 .sideBar {

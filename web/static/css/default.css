@@ -65,11 +65,11 @@ input[type='password'], input[type='text'] {
 
 .topPanel {
 	color: white;
-	padding-right: 30px;
-  padding-left: 30px;
+	padding: 0 10px;
 	box-sizing: border-box;
   background-color: #3b5998;
-  height: 100px;
+  height: 48px;
+	line-height: 48px;
   border: none;
 	border-bottom-color: #3b5998;
 	border-bottom-width: 3px;
@@ -78,6 +78,37 @@ input[type='password'], input[type='text'] {
 	-moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
   position: relative;
+}
+
+.topPanel .stats {
+	position: absolute;
+	right: 0;
+	top: 0;
+	display: block;
+	height: 48px;
+	line-height: 48px;
+}
+
+.topPanel .stats .cell {
+	display: inline-block;
+	width: 80px;
+	font-size: 18px;
+	font-weight: bold;
+	text-align: right;
+	background-position: top left;
+	background-repeat: no-repeat;
+	background-size: 24px 24px;
+	padding-top: 24px;
+	line-height: 24px;
+}
+.topPanel .stats .cell#CPU {
+	background-image: url(static/images/CPU.png);
+}
+.topPanel .stats .cell#RAM {
+	background-image: url(static/images/RAM.png);
+}
+.topPanel .stats .cell#DISK {
+	background-image: url(static/images/HDD.png);
 }
 
 .sideBar {

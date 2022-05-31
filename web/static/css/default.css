@@ -98,14 +98,14 @@ input[type='password'], input[type='text'] {
 .topPanel .stats .cell {
 	display: inline-block;
 	width: 80px;
-	font-size: 18px;
+	font-size: 12pt;
 	font-weight: bold;
 	text-align: center;
-	background-position: top center;
+	background-position: 4px center;
 	background-repeat: no-repeat;
 	background-size: 19px 19px;
-	padding-top: 24px;
-	line-height: 24px;
+	padding-top: 28px;
+	line-height: 20px;
 }
 .topPanel .stats .cell#CPU {
 	background-image: url(../images/CPU.png);

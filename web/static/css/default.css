@@ -65,7 +65,7 @@ input[type='password'], input[type='text'] {
 
 .topPanel {
 	color: white;
-	padding: 0 10px;
+	padding: 0;
 	box-sizing: border-box;
   background-color: #3b5998;
   height: 48px;
@@ -78,6 +78,12 @@ input[type='password'], input[type='text'] {
 	-moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
 	box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.75);
   position: relative;
+}
+
+.topPanel .logo {
+	width: auto;
+	height: 32px;
+	margin: 8px 0 0 16px;
 }
 
 .topPanel .stats {
@@ -94,7 +100,7 @@ input[type='password'], input[type='text'] {
 	width: 80px;
 	font-size: 18px;
 	font-weight: bold;
-	text-align: right;
+	text-align: center;
 	background-position: top center;
 	background-repeat: no-repeat;
 	background-size: 19px 19px;

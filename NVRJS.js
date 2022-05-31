@@ -446,7 +446,7 @@ function InitCamera(Cam, cameraID) {
 		CommandArgs.push('pipe:4');
 		CommandArgs.push('-segment_time');
 		CommandArgs.push(60 * config.system.continuousSegTimeMinutes);
-		CommandArgs.push(path.join(Path, '%Y-%m-%dT%H-%M-%S.mp4'));
+		CommandArgs.push(path.join(Path, '%Y-%m-%dT%H-%M-%S.mkv'));
 	}
 
 	Object.keys(Cam.liveConfig.streamConfig).forEach((streamingConfigKey) => {

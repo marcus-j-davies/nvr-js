@@ -102,13 +102,13 @@ input[type='password'], input[type='text'] {
 	line-height: 24px;
 }
 .topPanel .stats .cell#CPU {
-	background-image: url(static/images/CPU.png);
+	background-image: url(../static/images/CPU.png);
 }
 .topPanel .stats .cell#RAM {
-	background-image: url(static/images/RAM.png);
+	background-image: url(../static/images/RAM.png);
 }
 .topPanel .stats .cell#DISK {
-	background-image: url(static/images/HDD.png);
+	background-image: url(../static/images/HDD.png);
 }
 
 .sideBar {

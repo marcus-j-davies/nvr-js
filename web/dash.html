@@ -29,39 +29,19 @@
   </head>
   <body>
     <div class="topPanel">
-      <img src="static/images/LogoSmall.png" style="margin-top: 23px;">
-      <table style="float: right; height: 100%;">
-        <tr>
-          <td style="vertical-align: middle;">
-            <img src="static/images/CPU.png" style="width: 38px;">
-          </td>
-          <td style="vertical-align: middle;" id="CPU">
-           &nbsp;
-          </td>
-          <td style="vertical-align: middle;">
-            &nbsp;&nbsp;&nbsp;
-          </td>
-          <td style="vertical-align: middle;">
-            <img src="static/images/RAM.png" style="width: 38px;">
-          </td>
-          <td style="vertical-align: middle;" id="RAM">
-            &nbsp;
-          </td>
-          <td style="vertical-align: middle;">
-            &nbsp;&nbsp;&nbsp;
-          </td>
-          <td style="vertical-align: middle;">
-            <img src="static/images/HDD.png" style="width: 38px;">
-          </td>
-          <td style="vertical-align: middle;" id="DISK">
-            &nbsp;
-          </td>
-        </tr>
-      </table>
+      <img class="logo" src="static/images/LogoSmall.png">
+      <div class="stats">
+        <div class="cell" id="CPU">
+        </div>
+        <div class="cell" id="RAM">
+        </div>
+        <div class="cell" id="DISK">
+        </div>
+      </div>
 
     </div>
     <div class="sideBar">
-     
+
       {{#each cameras}}
       <div class="cameraPanel">
         <div class="title">{{this.name}}</div>

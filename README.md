@@ -10,7 +10,7 @@
 NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.  
 it's primarily aimed for 24/7 recording and live viewing.
 
-Under the hood it uses ffmpeg, node js, websockets and sqlite, all wrapped in a web based user interface.
+Under the hood it uses ffmpeg, node js and websockets, all wrapped in a web based user interface.
 The NVR has an API that allows to create events and timestamp them on the 24/7 recordings.
 
 The 24/7 recordings can be reviewed using a timeline UI where the events are also time aligned on that same timeline.
@@ -77,8 +77,7 @@ module.exports = {
 				fflags: '+igndts',
 				analyzeduration: '1000000',
 				probesize: '1000000',
-				rtsp_transport: 'tcp',
-				stimeout: '30000000'
+				rtsp_transport: 'tcp'
 			},
 			/* Input Address */
 			input: 'rtsp://user:password@ip:port/live0',

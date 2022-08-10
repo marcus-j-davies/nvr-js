@@ -111,9 +111,9 @@ or some other key event - It's really up to you.
 
 ```javascript
 {
-     "name": "Motion Detected" | "Door Opened" | "Some Other Event" | "Of Your Choice",
+     "event": "Motion Detected" | "Door Opened" | "Some Other Event" | "Of Your Choice",
      "sensorId": "HUEN849",
-     "date": 1636194611
+     "timestamp": 1636194611
 }
 ```
 
@@ -122,7 +122,7 @@ http://IP:7878/api/{APIKey}/event/{camera-id}
 Example: http://IP:7878/api/x7Te9m38JHQq6ddv/event/66e39d21-72c4-405c-a838-05a8e8fe0742
 
 ### Anyway
-I built this for my needs, it's very DIY and will likely have some faults in some places.  
+I built this for my needs, it's very DIY but should be fairly stable (famous last words)
 But if you want to use it, change it, build on it, feel free - I welcome PR's.
 
 ```

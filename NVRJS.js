@@ -100,12 +100,11 @@ App.get('/', (req, res) => {
 		config.system.disableUISecurity
 	) {
 		res.redirect('/dashboard');
-		return;
+	} else {
+		res.type('text/html');
+		res.status(200);
+		res.end(CompiledPages.Index());
 	}
-
-	res.type('text/html');
-	res.status(200);
-	res.end(CompiledPages.Index());
 });
 App.post('/login', (req, res) => {
 	const Data = req.body;
@@ -415,7 +414,7 @@ function MonitorCameraSegments(CameraID) {
 		Index[CameraID][MD.segment.startTime] = MD.segment.metaFileName;
 	});
 
-	fs.watch(Path, (eventType, fileName) => {
+	const Watcher = fs.watch(Path, (eventType, fileName) => {
 		if (eventType === 'rename') {
 			if (fileName.endsWith(FileType)) {
 				const Start = parseInt(fileName.split('.')[0]);
@@ -475,6 +474,13 @@ function MonitorCameraSegments(CameraID) {
 				Index[CameraID][Start] = Meta.segment.metaFileName;
 			}
 		}
+	});
+
+	Watcher.on('error', (Err) => {
+		console.log(
+			` - Camera Segment Watcher failed for: ${Cam.name}  Restarting Watcher after 10 seconds...`
+		);
+		setTimeout(() => MonitorCameraSegments(CameraID), 10000);
 	});
 }
 
@@ -653,43 +659,45 @@ function generateUUID() {
 
 /* Logged in check */
 function CheckAuthMW(req, res, next) {
+	const NonInteractive = res === undefined && next === undefined;
+
 	if (
 		config.system.disableUISecurity !== undefined &&
 		config.system.disableUISecurity
 	) {
-		if (res === undefined && next === undefined) {
+		if (NonInteractive) {
 			return true;
 		} else {
 			next();
 		}
-	}
-
-	if (res === undefined && next === undefined) {
-		if (req.handshake.headers.cookie !== undefined) {
-			const CS = cookie.parse(req.handshake.headers.cookie);
-			const Signed = cookieparser.signedCookies(CS, config.system.cookieKey);
-			if (
-				Signed.Authentication === undefined ||
-				Signed.Authentication !== 'Success'
-			) {
+	} else {
+		if (NonInteractive) {
+			if (req.handshake.headers.cookie !== undefined) {
+				const CS = cookie.parse(req.handshake.headers.cookie);
+				const Signed = cookieparser.signedCookies(CS, config.system.cookieKey);
+				if (
+					Signed.Authentication === undefined ||
+					Signed.Authentication !== 'Success'
+				) {
+					req.disconnect();
+					return false;
+				} else {
+					return true;
+				}
+			} else {
 				req.disconnect();
 				return false;
-			} else {
-				return true;
 			}
 		} else {
-			req.disconnect();
-			return false;
-		}
-	} else {
-		if (
-			req.signedCookies.Authentication === undefined ||
-			req.signedCookies.Authentication !== 'Success'
-		) {
-			res.status(401);
-			res.end();
-		} else {
-			next();
+			if (
+				req.signedCookies.Authentication === undefined ||
+				req.signedCookies.Authentication !== 'Success'
+			) {
+				res.status(401);
+				res.end();
+			} else {
+				next();
+			}
 		}
 	}
 }

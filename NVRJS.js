@@ -476,11 +476,14 @@ function MonitorCameraSegments(CameraID) {
 		}
 	});
 
-	Watcher.on('error', (Err) => {
-		console.log(
-			` - Camera Segment Watcher failed for: ${Cam.name}  Restarting Watcher after 10 seconds...`
-		);
-		setTimeout(() => MonitorCameraSegments(CameraID), 10000);
+	const Events = ['close', 'error'];
+	Events.forEach((E) => {
+		Watcher.on(E, (Err) => {
+			console.log(
+				` - Camera Segment Watcher failed for: ${Cam.name} Restarting Watcher after 10 seconds...`
+			);
+			setTimeout(() => MonitorCameraSegments(CameraID), 10000);
+		});
 	});
 }
 

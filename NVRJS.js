@@ -505,10 +505,42 @@ function InitCamera(Cam, cameraID) {
 	MonitorCameraSegments(cameraID);
 
 	if (Cam.continuous !== undefined && Cam.continuous) {
+		let CV = 'copy';
+		let CA = 'copy';
+
+		if (Cam.postInput !== undefined) {
+			if (Cam.postInput.videoEncoder !== undefined) {
+				CV = Cam.postInput.videoEncoder;
+			}
+			if (Cam.postInput.audioEncoder !== undefined) {
+				CA = Cam.postInput.audioEncoder;
+			}
+		}
+
 		CommandArgs.push('-c:v');
-		CommandArgs.push('copy');
+		CommandArgs.push(CV);
+		if (
+			Cam.postInput !== undefined &&
+			Cam.postInput.videoAdditional !== undefined
+		) {
+			Object.keys(Cam.postInput.videoAdditional).forEach((EK) => {
+				CommandArgs.push(`-${EK}`);
+				CommandArgs.push(Cam.postInput.videoAdditional[EK]);
+			});
+		}
+
 		CommandArgs.push('-c:a');
-		CommandArgs.push('copy');
+		CommandArgs.push(CA);
+		if (
+			Cam.postInput !== undefined &&
+			Cam.postInput.audioAdditional !== undefined
+		) {
+			Object.keys(Cam.postInput.audioAdditional).forEach((EK) => {
+				CommandArgs.push(`-${EK}`);
+				CommandArgs.push(Cam.postInput.audioAdditional[EK]);
+			});
+		}
+
 		CommandArgs.push('-f');
 		CommandArgs.push('segment');
 		CommandArgs.push('-segment_atclocktime');
@@ -613,6 +645,17 @@ function generateUUID() {
 
 /* Logged in check */
 function CheckAuthMW(req, res, next) {
+	if (
+		config.system.disableUISecurity !== undefined &&
+		config.system.disableUISecurity
+	) {
+		if (res === undefined && next === undefined) {
+			return true;
+		} else {
+			next();
+		}
+	}
+
 	if (res === undefined && next === undefined) {
 		if (req.handshake.headers.cookie !== undefined) {
 			const CS = cookie.parse(req.handshake.headers.cookie);

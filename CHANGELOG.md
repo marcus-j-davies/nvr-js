@@ -13,6 +13,8 @@
     **New Features**
      - Raise an event whilst reviewing live footage
      - Each recorded segement, now contains a hash, this offers the ability to check for modifications of recorded footage (SHA256).
+     - Allow post input configuration This allows to convert a stream that may not natively be h264
+     - Ability to disable security, allowing 3rd party access control.
 
     **Changes**
      - Dependency updates.

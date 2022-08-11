@@ -95,6 +95,14 @@ App.use('/static', express.static(path.join(__dirname, 'web', 'static')));
 
 // UI
 App.get('/', (req, res) => {
+	if (
+		config.system.disableUISecurity !== undefined &&
+		config.system.disableUISecurity
+	) {
+		res.redirect('/dashboard');
+		return;
+	}
+
 	res.type('text/html');
 	res.status(200);
 	res.end(CompiledPages.Index());

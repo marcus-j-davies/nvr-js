@@ -398,6 +398,61 @@ setInterval(
 	60000 * 60 * config.system.continuousPurgeIntervalHours
 );
 
+/* Create PlaceHolder Metafile */
+function CreatePlaceHolderMeta(CameraID) {
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', CameraID);
+	const Start = dayjs().unix();
+
+	const Meta = {
+		segment: {
+			metaFileName: `${Start}_placeholder.json`,
+			cameraId: CameraID,
+			startTime: Start,
+			fileName: undefined,
+			endTime: 0,
+			checksum: 0,
+			segmentId: generateUUID()
+		},
+		events: []
+	};
+
+	const FP = path.join(Path, Meta.segment.metaFileName);
+	fs.writeFileSync(FP, JSON.stringify(Meta));
+	Index[CameraID][Start] = Meta.segment.metaFileName;
+}
+
+/* Create Metafile */
+function CreateMeta(CameraID, fileName) {
+	fileName = fileName.trim().replace(/\n/g, '');
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', CameraID);
+
+	const Start = parseInt(fileName.split('.')[0]);
+	const End = dayjs().unix();
+
+	const Meta = {
+		segment: {
+			metaFileName: fileName.replace(FileType, '.json'),
+			cameraId: CameraID,
+			fileName: fileName,
+			startTime: Start,
+			endTime: End,
+			checksum: 0,
+			segmentId: generateUUID()
+		},
+		events: []
+	};
+
+	const Last = Math.max(Object.keys(Index[CameraID]).map((E) => parseInt(E)));
+	
+
+	const fileBuffer = fs.readFileSync(path.join(Path, fileName));
+	const HashSum = crypto.createHash('sha256');
+	HashSum.update(fileBuffer);
+
+	const Hex = HashSum.digest('hex');
+	Meta.segment.checksum = `sha256:${Hex}`;
+}
+
 /* Monitor for new segments */
 function MonitorCameraSegments(CameraID) {
 	console.log(' - Configuring Camera segment index.');
@@ -626,17 +681,20 @@ function InitCamera(Cam, cameraID) {
 			MP4F.write(data, 'binary');
 		});
 		Spawned.stdio[4].on('data', (FN) => {
-			// this can go, maybe?
+			CreateMeta(cameraID, FN.toString());
 		});
 	};
 
 	respawn(
 		childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
 	);
+	CreatePlaceHolderMeta(cameraID);
 
+	/*
 	Processors[cameraID] = {
 		CameraInfo: Cam
 	};
+	*/
 }
 
 /* Gen ID */

@@ -246,7 +246,7 @@ function Event(res, CameraID, Event, SensorID, Timestamp) {
 			const Last = Math.max(
 				...Object.keys(Index[CameraID]).map((E) => parseInt(E))
 			);
-			const PHF = path.join(Path, `${Last}_placeholder.json`);
+			const PHF = path.join(Path, `${Index[CameraID][Last]}`);
 			const PHFO = JSON.parse(fs.readFileSync(PHF, 'utf8'));
 
 			PHFO.events.push({
@@ -455,7 +455,7 @@ function CreateMeta(CameraID, fileName) {
 		...Object.keys(Index[CameraID]).map((E) => parseInt(E))
 	);
 
-	const PHF = path.join(Path, `${Last}_placeholder.json`);
+	const PHF = path.join(Path, `${Index[CameraID][Last]}`);
 	const PHFO = JSON.parse(fs.readFileSync(PHF, 'utf8'));
 
 	Meta.events = PHFO.events;

@@ -109,43 +109,45 @@ function LoadAndPosition(Timeline, Date, Copy, ID) {
 	if (MatchedSegments.length > 0) {
 		const Seg = MatchedSegments[0];
 
-		const VideoStart = Seg.segment.startTime;
+		if (Seg.segment.fileName !== undefined) {
+			const VideoStart = Seg.segment.startTime;
 
-		const URL = '/segments/' + ID + '/' + Seg.segment.fileName;
+			const URL = '/segments/' + ID + '/' + Seg.segment.fileName;
 
-		let StartTime = Time - VideoStart;
-		if (StartTime < 0) {
-			StartTime = 0;
-		}
-
-		if (VideoFile === undefined || VideoFile !== URL) {
-			if (!VE5.paused) {
-				VE5.pause();
+			let StartTime = Time - VideoStart;
+			if (StartTime < 0) {
+				StartTime = 0;
 			}
 
-			VideoElement.off('timeupdate');
-			VideoElement.on('timeupdate', (event) => {
-				const Date = dayjs
-					.unix(Seg.segment.startTime)
-					.add(VE5.currentTime, 'second')
-					.toDate();
-				Timeline.setCurrentTime(Date);
-			});
+			if (VideoFile === undefined || VideoFile !== URL) {
+				if (!VE5.paused) {
+					VE5.pause();
+				}
 
-			VideoElement.one('loadedmetadata', () => {
+				VideoElement.off('timeupdate');
+				VideoElement.on('timeupdate', (event) => {
+					const Date = dayjs
+						.unix(Seg.segment.startTime)
+						.add(VE5.currentTime, 'second')
+						.toDate();
+					Timeline.setCurrentTime(Date);
+				});
+
+				VideoElement.one('loadedmetadata', () => {
+					VE5.currentTime = StartTime;
+					VE5.play();
+				});
+
+				VideoElement.one('canplay', () => {
+					//VE5.play();
+				});
+				VE5.src = '/segments/' + ID + '/' + Seg.segment.fileName;
+				VideoFile = URL;
+			} else {
 				VE5.currentTime = StartTime;
-				VE5.play();
-			});
-
-			VideoElement.one('canplay', () => {
-				//VE5.play();
-			});
-			VE5.src = '/segments/' + ID + '/' + Seg.segment.fileName;
-			VideoFile = URL;
-		} else {
-			VE5.currentTime = StartTime;
-			if (VE5.paused) {
-				VE5.play();
+				if (VE5.paused) {
+					VE5.play();
+				}
 			}
 		}
 	}

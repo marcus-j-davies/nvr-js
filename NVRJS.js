@@ -359,7 +359,7 @@ function GetEventData(res, CameraID, Start, End) {
 			config.system.storageVolume,
 			'NVRJS_SYSTEM',
 			CameraID,
-			`${K}.json`
+			`${Index[CameraID][K]}`
 		);
 
 		if (fs.existsSync(FilePath)) {

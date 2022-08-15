@@ -18,7 +18,6 @@ dayjs.extend(customParseFormat);
 const RateLimiter = require('express-rate-limit');
 
 /* Some static things */
-let CurrentMetaFiles = [];
 const FileType = '.mp4';
 const Index = {};
 const SensorTimestamps = {};
@@ -238,23 +237,27 @@ function Event(res, CameraID, Event, SensorID, Timestamp) {
 			!SensorTimestamps.hasOwnProperty(SensorID) ||
 			SensorID === 'LIVE-VIEW-EVENT'
 		) {
-			const Meta = CurrentMetaFiles.filter(
-				(MF) => MF.segment.cameraId === CameraID
-			)[0];
-			Meta.events.push({
+			const Path = path.join(
+				config.system.storageVolume,
+				'NVRJS_SYSTEM',
+				CameraID
+			);
+
+			const Last = Math.max(
+				...Object.keys(Index[CameraID]).map((E) => parseInt(E))
+			);
+			const PHF = path.join(Path, `${Last}_placeholder.json`);
+			const PHFO = JSON.parse(fs.readFileSync(PHF, 'utf8'));
+
+			PHFO.events.push({
 				eventId: generateUUID(),
 				event: Event,
 				sensorId: SensorID,
 				timestamp: Timestamp
 			});
 
-			const FP = path.join(
-				config.system.storageVolume,
-				'NVRJS_SYSTEM',
-				CameraID,
-				Meta.segment.metaFileName
-			);
-			fs.writeFileSync(FP, JSON.stringify(Meta));
+			const FP = path.join(Path, PHFO.segment.metaFileName);
+			fs.writeFileSync(FP, JSON.stringify(PHFO));
 
 			res.status(204);
 			res.end();
@@ -384,7 +387,6 @@ function FFMPEGExitDueToError(Code, Signal) {
 }
 
 /* Start up cameras */
-const Processors = {};
 const Cameras = Object.keys(config.cameras);
 Cameras.forEach((cameraID) => {
 	const Cam = config.cameras[cameraID];
@@ -442,109 +444,56 @@ function CreateMeta(CameraID, fileName) {
 		events: []
 	};
 
-	const Last = Math.max(Object.keys(Index[CameraID]).map((E) => parseInt(E)));
-	
-
 	const fileBuffer = fs.readFileSync(path.join(Path, fileName));
 	const HashSum = crypto.createHash('sha256');
 	HashSum.update(fileBuffer);
 
 	const Hex = HashSum.digest('hex');
 	Meta.segment.checksum = `sha256:${Hex}`;
-}
 
-/* Monitor for new segments */
-function MonitorCameraSegments(CameraID) {
-	console.log(' - Configuring Camera segment index.');
-	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', CameraID);
-	Index[CameraID] = {};
+	const Last = Math.max(
+		...Object.keys(Index[CameraID]).map((E) => parseInt(E))
+	);
 
-	const SegMetaFiles = fs
-		.readdirSync(Path)
-		.filter((File) => path.extname(File) === '.json');
+	const PHF = path.join(Path, `${Last}_placeholder.json`);
+	const PHFO = JSON.parse(fs.readFileSync(PHF, 'utf8'));
 
-	SegMetaFiles.forEach((MF) => {
-		const FD = fs.readFileSync(path.join(Path, MF), 'utf8');
-		const MD = JSON.parse(FD);
-		Index[CameraID][MD.segment.startTime] = MD.segment.metaFileName;
-	});
+	Meta.events = PHFO.events;
 
-	const Watcher = fs.watch(Path, (eventType, fileName) => {
-		if (eventType === 'rename') {
-			if (fileName.endsWith(FileType)) {
-				const Start = parseInt(fileName.split('.')[0]);
+	fs.writeFileSync(
+		path.join(Path, Meta.segment.metaFileName),
+		JSON.stringify(Meta)
+	);
 
-				if (
-					CurrentMetaFiles.filter((MF) => MF.segment.cameraId === CameraID)
-						.length > 0
-				) {
-					const Old = CurrentMetaFiles.filter(
-						(MF) => MF.segment.cameraId === CameraID
-					)[0];
+	fs.unlinkSync(PHF);
+	delete Index[CameraID][Last];
+	Index[CameraID][Start] = Meta.segment.metaFileName;
 
-					Old.segment.endTime = dayjs().unix();
-
-					const fileBuffer = fs.readFileSync(
-						path.join(Path, Old.segment.fileName)
-					);
-					const hashSum = crypto.createHash('sha256');
-					hashSum.update(fileBuffer);
-
-					const hex = hashSum.digest('hex');
-					Old.segment.checksum = `sha256:${hex}`;
-
-					const FP = path.join(
-						config.system.storageVolume,
-						'NVRJS_SYSTEM',
-						CameraID,
-						Old.segment.metaFileName
-					);
-					fs.writeFileSync(FP, JSON.stringify(Old));
-				}
-
-				const Meta = {
-					segment: {
-						metaFileName: fileName.replace(FileType, '.json'),
-						cameraId: CameraID,
-						fileName: fileName,
-						startTime: Start,
-						endTime: 0,
-						checksum: 0,
-						segmentId: generateUUID()
-					},
-					events: []
-				};
-				CurrentMetaFiles = CurrentMetaFiles.filter(
-					(MF) => MF.segment.cameraId !== CameraID
-				);
-				CurrentMetaFiles.push(Meta);
-
-				const FP = path.join(
-					config.system.storageVolume,
-					'NVRJS_SYSTEM',
-					CameraID,
-					Meta.segment.metaFileName
-				);
-				fs.writeFileSync(FP, JSON.stringify(Meta));
-				Index[CameraID][Start] = Meta.segment.metaFileName;
-			}
-		}
-	});
-
-	const Events = ['close', 'error'];
-	Events.forEach((E) => {
-		Watcher.on(E, (Err) => {
-			console.log(
-				` - Camera Segment Watcher failed for: ${Cam.name} Restarting Watcher after 10 seconds...`
-			);
-			setTimeout(() => MonitorCameraSegments(CameraID), 10000);
-		});
-	});
+	CreatePlaceHolderMeta(CameraID);
 }
 
 /* Camera Initer */
 function InitCamera(Cam, cameraID) {
 	console.log(` - Configuring camera: ${Cam.name}`);
+
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', cameraID);
+	if (!fs.existsSync(Path)) {
+		fs.mkdirSync(Path);
+	}
+
+	Index[cameraID] = {};
+
+	const SegMetaFiles = fs
+		.readdirSync(Path)
+		.filter(
+			(File) => path.extname(File) === '.json' && !File.includes('_placeholder')
+		);
+
+	SegMetaFiles.forEach((MF) => {
+		const FD = fs.readFileSync(path.join(Path, MF), 'utf8');
+		const MD = JSON.parse(FD);
+		Index[cameraID][MD.segment.startTime] = MD.segment.metaFileName;
+	});
 
 	const CommandArgs = [];
 
@@ -569,13 +518,6 @@ function InitCamera(Cam, cameraID) {
 		)
 	);
 
-	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', cameraID);
-	if (!fs.existsSync(Path)) {
-		fs.mkdirSync(Path);
-	}
-
-	MonitorCameraSegments(cameraID);
-
 	if (Cam.continuous !== undefined && Cam.continuous) {
 		let CV = 'copy';
 		let CA = 'copy';
@@ -588,9 +530,9 @@ function InitCamera(Cam, cameraID) {
 				CA = Cam.postInput.audioEncoder;
 			}
 		}
-
 		CommandArgs.push('-c:v');
 		CommandArgs.push(CV);
+
 		if (
 			Cam.postInput !== undefined &&
 			Cam.postInput.videoAdditional !== undefined
@@ -603,6 +545,7 @@ function InitCamera(Cam, cameraID) {
 
 		CommandArgs.push('-c:a');
 		CommandArgs.push(CA);
+
 		if (
 			Cam.postInput !== undefined &&
 			Cam.postInput.audioAdditional !== undefined
@@ -689,12 +632,6 @@ function InitCamera(Cam, cameraID) {
 		childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
 	);
 	CreatePlaceHolderMeta(cameraID);
-
-	/*
-	Processors[cameraID] = {
-		CameraInfo: Cam
-	};
-	*/
 }
 
 /* Gen ID */

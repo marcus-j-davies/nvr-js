@@ -246,29 +246,35 @@ function Event(res, CameraID, Event, SensorID, Timestamp) {
 			const Last = Math.max(
 				...Object.keys(Index[CameraID]).map((E) => parseInt(E))
 			);
-			const PHF = path.join(Path, `${Index[CameraID][Last]}`);
-			const PHFO = JSON.parse(fs.readFileSync(PHF, 'utf8'));
+			const PHFOP = path.join(Path, Index[CameraID][Last]);
+			const PHFO = ReadMetaFile(PHFOP);
 
-			PHFO.events.push({
-				eventId: generateUUID(),
-				event: Event,
-				sensorId: SensorID,
-				timestamp: Timestamp
-			});
+			if (PHFO !== false) {
+				PHFO.events.push({
+					eventId: generateUUID(),
+					event: Event,
+					sensorId: SensorID,
+					timestamp: Timestamp
+				});
 
-			const FP = path.join(Path, PHFO.segment.metaFileName);
-			fs.writeFileSync(FP, JSON.stringify(PHFO));
+				const FP = path.join(Path, PHFO.segment.metaFileName);
+				if (WriteMetaFile(PHFO, FP)) {
+					res.status(204);
+					res.end();
 
-			res.status(204);
-			res.end();
+					SensorTimestamps[SensorID] = dayjs().unix();
 
-			SensorTimestamps[SensorID] = dayjs().unix();
-
-			setTimeout(() => {
-				delete SensorTimestamps[SensorID];
-			}, 1000 * config.system.eventSensorIdCoolOffSeconds);
-
-			return;
+					setTimeout(() => {
+						delete SensorTimestamps[SensorID];
+					}, 1000 * config.system.eventSensorIdCoolOffSeconds);
+				} else {
+					res.status(500);
+					res.end();
+				}
+			} else {
+				res.status(500);
+				res.end();
+			}
 		} else {
 			res.status(429);
 			res.end();
@@ -359,12 +365,12 @@ function GetEventData(res, CameraID, Start, End) {
 			config.system.storageVolume,
 			'NVRJS_SYSTEM',
 			CameraID,
-			`${Index[CameraID][K]}`
+			Index[CameraID][K]
 		);
 
-		if (fs.existsSync(FilePath)) {
-			const PL = fs.readFileSync(FilePath, 'utf8');
-			Data.segments.push(JSON.parse(PL));
+		const PL = ReadMetaFile(FilePath);
+		if (PL !== false) {
+			Data.segments.push(PL);
 		}
 	});
 
@@ -419,8 +425,12 @@ function CreatePlaceHolderMeta(CameraID) {
 	};
 
 	const FP = path.join(Path, Meta.segment.metaFileName);
-	fs.writeFileSync(FP, JSON.stringify(Meta));
-	Index[CameraID][Start] = Meta.segment.metaFileName;
+	if (WriteMetaFile(Meta, FP)) {
+		Index[CameraID][Start] = Meta.segment.metaFileName;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 /* Create Metafile */
@@ -455,21 +465,18 @@ function CreateMeta(CameraID, fileName) {
 		...Object.keys(Index[CameraID]).map((E) => parseInt(E))
 	);
 
-	const PHF = path.join(Path, `${Index[CameraID][Last]}`);
-	const PHFO = JSON.parse(fs.readFileSync(PHF, 'utf8'));
+	const PHFOP = path.join(Path, Index[CameraID][Last]);
+	const PHFO = ReadMetaFile(PHFOP);
 
-	Meta.events = PHFO.events;
-
-	fs.writeFileSync(
-		path.join(Path, Meta.segment.metaFileName),
-		JSON.stringify(Meta)
-	);
-
-	fs.unlinkSync(PHF);
-	delete Index[CameraID][Last];
-	Index[CameraID][Start] = Meta.segment.metaFileName;
-
-	CreatePlaceHolderMeta(CameraID);
+	if (PHFO !== false) {
+		Meta.events = PHFO.events;
+		if (WriteMetaFile(Meta, path.join(Path, Meta.segment.metaFileName))) {
+			delete Index[CameraID][Last];
+			fs.unlinkSync(PHFOP);
+			Index[CameraID][Start] = Meta.segment.metaFileName;
+			CreatePlaceHolderMeta(CameraID);
+		}
+	}
 }
 
 /* Camera Initer */
@@ -490,9 +497,10 @@ function InitCamera(Cam, cameraID) {
 		);
 
 	SegMetaFiles.forEach((MF) => {
-		const FD = fs.readFileSync(path.join(Path, MF), 'utf8');
-		const MD = JSON.parse(FD);
-		Index[cameraID][MD.segment.startTime] = MD.segment.metaFileName;
+		const MD = ReadMetaFile(path.join(Path, MF));
+		if (MD !== false) {
+			Index[cameraID][MD.segment.startTime] = MD.segment.metaFileName;
+		}
 	});
 
 	const CommandArgs = [];
@@ -626,12 +634,24 @@ function InitCamera(Cam, cameraID) {
 		Spawned.stdio[4].on('data', (FN) => {
 			CreateMeta(cameraID, FN.toString());
 		});
+
+		return Spawned;
 	};
 
-	respawn(
+	const Process = respawn(
 		childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
 	);
-	CreatePlaceHolderMeta(cameraID);
+
+	if (!CreatePlaceHolderMeta(cameraID)) {
+		Process.removeAllListeners('close');
+		Process.kill();
+		console.log(
+			`   - Could not kick start segment management for camera: ${Cam.name}`
+		);
+		console.log(`   - Camera will not be started.`);
+	} else {
+		console.log(`   - Camera: ${Cam.name} started.`);
+	}
 }
 
 /* Gen ID */
@@ -715,6 +735,27 @@ function purgeContinuous() {
 			fs.unlinkSync(path.join(Path, `${F}${FileType}`)); // footage
 		});
 	});
+}
+
+/* Write Operation */
+function WriteMetaFile(OBJ, FilePath) {
+	try {
+		fs.writeFileSync(FilePath, JSON.stringify(OBJ));
+		return true;
+	} catch (Err) {
+		return false;
+	}
+}
+
+/* Read Operation */
+function ReadMetaFile(FilePath) {
+	try {
+		const Result = fs.readFileSync(FilePath, 'utf8');
+		const OBJ = JSON.parse(Result);
+		return OBJ;
+	} catch (Err) {
+		return false;
+	}
 }
 
 HTTP.listen(config.system.interfacePort);

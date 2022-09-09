@@ -731,8 +731,17 @@ function purgeContinuous() {
 		Files.forEach((F) => {
 			const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', K);
 			delete Index[K][F]; // Index Entry
-			fs.unlinkSync(path.join(Path, `${F}.json`)); // Metafile
-			fs.unlinkSync(path.join(Path, `${F}${FileType}`)); // footage
+			try {
+				fs.unlinkSync(path.join(Path, `${F}.json`)); // Metafile
+			} catch(e) {
+				// file couldn't be removed, likely due to permission issue, flaky disk etc.
+				// not anything we can do about it, but don't crash.
+			}
+			try {
+				fs.unlinkSync(path.join(Path, `${F}${FileType}`)); // footage
+			} catch(e) {
+				// ditto
+			}
 		});
 	});
 }

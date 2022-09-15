@@ -596,18 +596,20 @@ function InitCamera(Cam, cameraID) {
 		detached: true,
 		stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe']
 	};
-	const respawn = (Spawned) => {
+	const respawn = (Spawned, PrevSock) => {
 		const MP4F = new MP4Frag();
 
 		const IOptions = {
 			path: '/streams/' + cameraID
 		};
-		const Socket = io(HTTP, IOptions);
-		Socket.on('connection', (ClientSocket) => {
-			if (CheckAuthMW(ClientSocket)) {
-				ClientSocket.emit('segment', MP4F.initialization);
-			}
-		});
+		const Socket = PrevSock || io(HTTP, IOptions); // avoid adding a ton of listeners to the same HTTP server
+		if (!PrevSock) {
+			Socket.on('connection', (ClientSocket) => {
+				if (CheckAuthMW(ClientSocket)) {
+					ClientSocket.emit('segment', MP4F.initialization);
+				}
+			});
+		}
 
 		MP4F.on('segment', (data) => {
 			Socket.sockets.sockets.forEach((ClientSocket) => {
@@ -623,7 +625,12 @@ function InitCamera(Cam, cameraID) {
 			MP4F.destroy();
 			setTimeout(() => {
 				respawn(
-					childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
+					childprocess.spawn(
+						config.system.ffmpegLocation,
+						CommandArgs,
+						Options
+					),
+					Socket
 				);
 			}, 10000);
 		});
@@ -733,13 +740,13 @@ function purgeContinuous() {
 			delete Index[K][F]; // Index Entry
 			try {
 				fs.unlinkSync(path.join(Path, `${F}.json`)); // Metafile
-			} catch(e) {
+			} catch (e) {
 				// file couldn't be removed, likely due to permission issue, flaky disk etc.
 				// not anything we can do about it, but don't crash.
 			}
 			try {
 				fs.unlinkSync(path.join(Path, `${F}${FileType}`)); // footage
-			} catch(e) {
+			} catch (e) {
 				// ditto
 			}
 		});

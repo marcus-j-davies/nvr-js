@@ -1,5 +1,27 @@
 # NVR-JS Change Log
 
+  - 3.0.0 
+
+    **Breaking Changes**
+     - The **NVRJS_CAMERA_RECORDINGS** directory is no longer used.
+     - The Storage mechanism has been updated, and is not compatible with previous recordings
+        - You can continue to run this version with no issues, but previous data will not be available.
+     - Event payload properties have been updated.
+        - **name** -> **event**
+        - **date** -> **timestamp**
+
+    **New Features**
+     - Raise an event whilst reviewing live footage
+     - Each recorded segement, now contains a hash, this offers the ability to check for modifications of recorded footage (SHA256).
+     - Allow post input configuration This allows to convert a stream that may not natively be h264
+     - Ability to disable security, allowing 3rd party access control.
+
+    **Changes**
+     - Dependency updates.
+     - SQL storage has been removed and replaced with JSON files
+     - Performancee updates
+
+
   - 2.0.0
 
     **Breaking Changes**

@@ -2,6 +2,7 @@
 /* eslint-disable no-undef */
 const SearchTimebufferHours = 2;
 let Segments = [];
+let VideoFile;
 
 function StartStats() {
 	const Update = () => {
@@ -36,6 +37,7 @@ function StartTimeline(ID, Name) {
 			const VE5 = $(VideoElement)[0];
 			VE5.pause();
 			VE5.remove();
+			VideoFile = undefined;
 		}
 	});
 
@@ -96,54 +98,63 @@ function StartTimeline(ID, Name) {
 	});
 }
 
-let VideoFile;
 function LoadAndPosition(Timeline, Date, Copy, ID) {
 	const VideoElement = Copy.find('video');
 	const VE5 = $(VideoElement)[0];
 	const Time = dayjs(Date).unix();
 	const MatchedSegments = Segments.filter(
-		(S) => S.Start <= Time && S.End >= Time
-	)[0];
-	const VideoStart = MatchedSegments.Start;
+		(S) => S.segment.startTime <= Time && S.segment.endTime >= Time
+	);
 
-	const URL = '/segments/' + ID + '/' + MatchedSegments.FileName;
+	if (MatchedSegments.length > 0) {
+		const Seg = MatchedSegments[0];
 
-	let StartTime = Time - VideoStart;
-	if (StartTime < 0) {
-		StartTime = 0;
-	}
+		if (Seg.segment.fileName !== undefined) {
+			const VideoStart = Seg.segment.startTime;
 
-	if (VideoFile === undefined || VideoFile !== URL) {
-		if (!VE5.paused) {
-			VE5.pause();
-		}
+			const URL = '/segments/' + ID + '/' + Seg.segment.fileName;
 
-		VideoElement.off('timeupdate');
-		VideoElement.on('timeupdate', (event) => {
-			const Date = dayjs
-				.unix(MatchedSegments.Start)
-				.add(VE5.currentTime, 'second')
-				.toDate();
-			Timeline.setCurrentTime(Date);
-		});
+			let StartTime = Time - VideoStart;
+			if (StartTime < 0) {
+				StartTime = 0;
+			}
 
-		VideoElement.one('canplay', () => {
-			VE5.play().then((R) => {
+			if (VideoFile === undefined || VideoFile !== URL) {
+				if (!VE5.paused) {
+					VE5.pause();
+				}
+
+				VideoElement.off('timeupdate');
+				VideoElement.on('timeupdate', (event) => {
+					const Date = dayjs
+						.unix(Seg.segment.startTime)
+						.add(VE5.currentTime, 'second')
+						.toDate();
+					Timeline.setCurrentTime(Date);
+				});
+
+				VideoElement.one('loadedmetadata', () => {
+					VE5.currentTime = StartTime;
+					VE5.play();
+				});
+
+				VideoElement.one('canplay', () => {
+					//VE5.play();
+				});
+				VE5.src = '/segments/' + ID + '/' + Seg.segment.fileName;
+				VideoFile = URL;
+			} else {
 				VE5.currentTime = StartTime;
-			});
-		});
-		VE5.src = '/segments/' + ID + '/' + MatchedSegments.FileName;
-		VideoFile = URL;
-	} else {
-		VE5.currentTime = StartTime;
-		if (VE5.paused) {
-			VE5.play();
+				if (VE5.paused) {
+					VE5.play();
+				}
+			}
 		}
 	}
 }
 
 function EventSort(a, b) {
-	return a.Start - b.Start;
+	return a.segment.startTime - b.segment.startTime;
 }
 
 function GetSegmentsAndEvents(Timeline, DataSet, Start, End, ID) {
@@ -154,8 +165,8 @@ function GetSegmentsAndEvents(Timeline, DataSet, Start, End, ID) {
 		DataSet.clear();
 		for (let i = 0; i < data.segments.length; i++) {
 			const Seg = data.segments[i];
-			const Start = dayjs.unix(Seg.Start);
-			const End = dayjs.unix(Seg.End);
+			const Start = dayjs.unix(Seg.segment.startTime);
+			const End = dayjs.unix(Seg.segment.endTime);
 
 			DataSet.add({
 				start: Start.toDate(),
@@ -165,22 +176,22 @@ function GetSegmentsAndEvents(Timeline, DataSet, Start, End, ID) {
 				content: Start.format('YYYY-MM-DD HH:mm:ss'),
 				style:
 					'background-color: rgba(0,0,0,0.5);color: white;border-radius: 6px;',
-				fileName: Seg.FileName,
-				cameraId: Seg.CameraID,
-				segmentId: Seg.SegmentID
+				fileName: Seg.segment.fileName,
+				cameraId: Seg.segment.cameraId,
+				segmentId: Seg.segment.segmentId
 			});
-		}
 
-		for (let i = 0; i < data.events.length; i++) {
-			const Event = data.events[i];
-			const Start = dayjs.unix(Event.Date);
+			for (let i = 0; i < Seg.events.length; i++) {
+				const Event = Seg.events[i];
+				const Start = dayjs.unix(Event.timestamp);
 
-			DataSet.add({
-				start: Start.toDate(),
-				group: 'Events',
-				content: Event.Name,
-				style: 'background-color: orangered;color: white;border-radius: 6px;'
-			});
+				DataSet.add({
+					start: Start.toDate(),
+					group: 'Events',
+					content: Event.event,
+					style: 'background-color: orangered;color: white;border-radius: 6px;'
+				});
+			}
 		}
 
 		Timeline.redraw();
@@ -206,9 +217,31 @@ function StartLive(ID, Name, Codec) {
 			VE5.remove();
 		},
 		buttons: {
+			'Trigger Event': function () {
+				const Event = prompt('Name of event');
+				const PL = {
+					event: Event,
+					timestamp: dayjs().unix(),
+					sensorId: 'LIVE-VIEW-EVENT'
+				};
+
+				$.ajax({
+					type: 'POST',
+					url: `/event/${ID}`,
+					data: JSON.stringify(PL),
+					contentType: 'application/json; charset=utf-8',
+					success: function () {
+						//
+					},
+					error: function () {
+						alert('Could not create event');
+					}
+				});
+			},
 			'Full Screen': function () {
 				goFullscreen(VE5);
 			},
+
 			Snapshot: function () {
 				const canvas = document.createElement('canvas');
 				canvas.width = VE5.videoWidth;

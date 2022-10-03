@@ -1,8 +1,10 @@
 module.exports = {
 	/* System Settings */
 	system: {
+		/* Disable Security - Know what your doing before changing this! */
+		disableUISecurity: false,
 		/* Username */
-		username: "admin",
+		username: 'admin',
 		/* bcrypt password (default: admin) */
 		password: '$2a$10$CnOx/6vFY2ehRDf68yqd..aLlv0UM.zeBLKnRjuU8YykCsC2Ap3iG',
 		/* bcrypt API Key (default: x7Te9m38JHQq6ddv) */
@@ -32,11 +34,19 @@ module.exports = {
 				fflags: '+igndts',
 				analyzeduration: '1000000',
 				probesize: '1000000',
-				rtsp_transport: 'tcp',
-				stimeout: '30000000'
+				rtsp_transport: 'tcp'
 			},
 			/* Input Address */
 			input: 'rtsp://user:password@ip:port/live0',
+			/* Only use these if the incoming stream is not already h264/5 */
+			/* Note that depending on the encoder in use, The CPU could be taxed */
+			/* The below will use the HW assisted h264 encoder for RPi4 */
+			postInput: {
+				// videoEncoder: 'h264_v4l2m2m',
+				// videoAdditional:{ffmpeg_option:'value'}
+				// audioEncoder: 'aac',
+				// audioAdditional:{ffmpeg_option:'value'}
+			},
 			/* Recording 24/7 */
 			/* Disabling continuous recording, will disable the ability to create events */
 			continuous: true,

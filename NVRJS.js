@@ -2,6 +2,7 @@ const express = require('express');
 const cookieparser = require('cookie-parser');
 const cookie = require('cookie');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const http = require('http');
 const io = require('socket.io');
 const handlebars = require('handlebars');
@@ -10,14 +11,19 @@ const MP4Frag = require('./core/MP4Frag');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const sql = require('sqlite3');
 const osu = require('node-os-utils');
+const sanitize = require('sanitize-filename');
 const dayjs = require('dayjs');
-const queue = require('queue-fifo');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
 const RateLimiter = require('express-rate-limit');
 
+/* Some static things */
+const FileType = '.mp4';
+const Index = {};
+const SensorTimestamps = {};
+
+/* Check and load config */
 console.log(' - Checking config.');
 if (!fs.existsSync(path.join(os.homedir(), 'nvrjs.config.js'))) {
 	fs.copyFileSync(
@@ -25,19 +31,16 @@ if (!fs.existsSync(path.join(os.homedir(), 'nvrjs.config.js'))) {
 		path.join(os.homedir(), 'nvrjs.config.js')
 	);
 	console.log(
-		' - New config created: ' + path.join(os.homedir(), 'nvrjs.config.js')
+		` - New config created: ${path.join(os.homedir(), 'nvrjs.config.js')}`
 	);
 	console.log(' - Edit config to suite and restart!');
 	process.exit(0);
 }
 const config = require(path.join(os.homedir(), 'nvrjs.config.js'));
-console.log(' - Config loaded: ' + path.join(os.homedir(), 'nvrjs.config.js'));
+console.log(` - Config loaded: ${path.join(os.homedir(), 'nvrjs.config.js')}`);
 
-let SQL;
-const SensorTimestamps = {};
-
+/* Storage Volumes and folders */
 console.log(' - Checking volumes and ffmpeg.');
-
 if (!fs.existsSync(config.system.storageVolume)) {
 	console.log(' - Storage volume does not exist');
 	process.exit();
@@ -48,15 +51,6 @@ if (!fs.existsSync(config.system.storageVolume)) {
 		) {
 			fs.mkdirSync(path.join(config.system.storageVolume, 'NVRJS_SYSTEM'));
 		}
-		if (
-			!fs.existsSync(
-				path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS')
-			)
-		) {
-			fs.mkdirSync(
-				path.join(config.system.storageVolume, 'NVRJS_CAMERA_RECORDINGS')
-			);
-		}
 	} catch (e) {
 		console.log('Error creating system directories.');
 		console.log(e.message);
@@ -64,44 +58,21 @@ if (!fs.existsSync(config.system.storageVolume)) {
 	}
 }
 
+/* FFMPEG Check */
 if (!fs.existsSync(config.system.ffmpegLocation)) {
 	console.log(
-		'ffmpeg not found in specifed location: ' + config.system.ffmpegLocation
+		`ffmpeg not found in specifed location: ${config.system.ffmpegLocation}`
 	);
 	process.exit(0);
 }
 
-CreateOrConnectSQL(() => {
-	console.log(' - Starting purge interval.');
-	setInterval(
-		purgeContinuous,
-		1000 * 3600 * config.system.continuousPurgeIntervalHours
-	);
-	purgeContinuous();
-});
-
-console.log(' - Starting data write queue.');
-const FIFO = new queue();
-function Commit() {
-	if (!FIFO.isEmpty()) {
-		const Query = FIFO.dequeue();
-		const STMT = SQL.prepare(Query.statement, () => {
-			STMT.run(Query.params, () => {
-				STMT.finalize();
-				Commit();
-			});
-		});
-	} else {
-		setTimeout(Commit, 10000);
-	}
-}
-setTimeout(Commit, 10000);
-
+/* Protect web service from abuse */
 const IOLimiter = RateLimiter({
 	windowMs: 2000,
 	max: 100
 });
 
+/* Configure WEB UI */
 console.log(' - Creating express application.');
 const App = new express();
 App.use(IOLimiter);
@@ -124,9 +95,16 @@ App.use('/static', express.static(path.join(__dirname, 'web', 'static')));
 
 // UI
 App.get('/', (req, res) => {
-	res.type('text/html');
-	res.status(200);
-	res.end(CompiledPages.Index());
+	if (
+		config.system.disableUISecurity !== undefined &&
+		config.system.disableUISecurity
+	) {
+		res.redirect('/dashboard');
+	} else {
+		res.type('text/html');
+		res.status(200);
+		res.end(CompiledPages.Index());
+	}
 });
 App.post('/login', (req, res) => {
 	const Data = req.body;
@@ -148,11 +126,29 @@ App.post('/login', (req, res) => {
 	}
 });
 
+// Dashboard
 App.get('/dashboard', CheckAuthMW, (req, res) => {
 	res.type('text/html');
 	res.status(200);
 	res.end(CompiledPages.Dash(config));
 });
+
+// System Info (Uses shared API)
+App.get('/systeminfo', CheckAuthMW, (req, res) => {
+	getSystemInfo(req, res);
+});
+
+// Snapshot (Uses shared API)
+App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
+	getSnapShot(res, req.params.CameraID, req.params.Width);
+});
+
+// Get Event data (Uses shared API)
+App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
+	GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
+});
+
+/* Configure APIs */
 
 // System Info
 App.get('/api/:APIKey/systeminfo', (req, res) => {
@@ -162,9 +158,6 @@ App.get('/api/:APIKey/systeminfo', (req, res) => {
 		res.status(401);
 		res.end();
 	}
-});
-App.get('/systeminfo', CheckAuthMW, (req, res) => {
-	getSystemInfo(req, res);
 });
 
 function getSystemInfo(req, res) {
@@ -184,14 +177,18 @@ function getSystemInfo(req, res) {
 	});
 }
 
-// get Cameras
+// Get Cameras
 App.get('/api/:APIKey/cameras', (req, res) => {
 	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
 		const Cams = [];
 
 		Object.keys(config.cameras).forEach((ID) => {
 			const Cam = config.cameras[ID];
-			Cams.push({ id: ID, name: Cam.name, continuous: Cam.continuous });
+			Cams.push({
+				id: ID,
+				name: Cam.name,
+				continuous: Cam.continuous
+			});
 		});
 
 		res.type('application/json');
@@ -203,51 +200,93 @@ App.get('/api/:APIKey/cameras', (req, res) => {
 	}
 });
 
-// Event Creation
+// Create Event
+App.post('/event/:CameraID', CheckAuthMW, (req, res) => {
+	Event(
+		res,
+		req.params.CameraID,
+		req.body.event,
+		req.body.sensorId,
+		req.body.timestamp
+	);
+});
+
 App.post('/api/:APIKey/event/:CameraID', (req, res) => {
 	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
-		if (config.cameras[req.params.CameraID].continuous) {
-			if (!SensorTimestamps.hasOwnProperty(req.body.sensorId)) {
-				FIFO.enqueue({
-					statement:
-						'INSERT INTO Events(EventID,CameraID,Name,SensorID,Date) VALUES(?,?,?,?,?)',
-					params: [
-						generateUUID(),
-						req.params.CameraID,
-						req.body.name,
-						req.body.sensorId,
-						req.body.date
-					]
-				});
-				res.status(204);
-				res.end();
-
-				SensorTimestamps[req.body.sensorId] = dayjs().unix();
-
-				setTimeout(() => {
-					delete SensorTimestamps[req.body.sensorId];
-				}, 1000 * config.system.eventSensorIdCoolOffSeconds);
-
-				return;
-			} else {
-				res.status(429);
-				res.end();
-			}
-		} else {
-			res.status(501);
-			res.end();
-		}
+		Event(
+			res,
+			req.params.CameraID,
+			req.body.event,
+			req.body.sensorId,
+			req.body.timestamp
+		);
 	} else {
 		res.status(401);
 		res.end();
 	}
 });
 
-// Snapshot
-App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
-	getSnapShot(res, req.params.CameraID, req.params.Width);
-});
+function Event(res, CameraID, Event, SensorID, Timestamp) {
+	if (!config.cameras.hasOwnProperty(CameraID)) {
+		res.status(404);
+		res.end();
+		return;
+	}
 
+	if (config.cameras[CameraID].continuous) {
+		if (
+			!SensorTimestamps.hasOwnProperty(SensorID) ||
+			SensorID === 'LIVE-VIEW-EVENT'
+		) {
+			const Path = path.join(
+				config.system.storageVolume,
+				'NVRJS_SYSTEM',
+				CameraID
+			);
+
+			const Last = Math.max(
+				...Object.keys(Index[CameraID]).map((E) => parseInt(E))
+			);
+			const PHFOP = path.join(Path, Index[CameraID][Last]);
+			const PHFO = ReadMetaFile(PHFOP);
+
+			if (PHFO !== false) {
+				PHFO.events.push({
+					eventId: generateUUID(),
+					event: Event,
+					sensorId: SensorID,
+					timestamp: Timestamp
+				});
+
+				const FP = path.join(Path, PHFO.segment.metaFileName);
+				if (WriteMetaFile(PHFO, FP)) {
+					res.status(204);
+					res.end();
+
+					SensorTimestamps[SensorID] = dayjs().unix();
+
+					setTimeout(() => {
+						delete SensorTimestamps[SensorID];
+					}, 1000 * config.system.eventSensorIdCoolOffSeconds);
+				} else {
+					res.status(500);
+					res.end();
+				}
+			} else {
+				res.status(500);
+				res.end();
+			}
+		} else {
+			res.status(429);
+			res.end();
+		}
+	} else {
+		res.status(501);
+		res.end();
+	}
+}
+
+// Snapshot
 App.get('/api/:APIKey/snapshot/:CameraID/:Width', (req, res) => {
 	if (bcrypt.compareSync(req.params.APIKey, config.system.apiKey)) {
 		getSnapShot(res, req.params.CameraID, req.params.Width);
@@ -313,69 +352,37 @@ App.get('/api/:APIKey/geteventdata/:CameraID/:Start/:End', (req, res) => {
 	}
 });
 
-App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
-	GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
-});
-
 function GetEventData(res, CameraID, Start, End) {
-	const Data = {};
+	const ID = sanitize(CameraID);
 
-	let STMT = SQL.prepare(
-		'SELECT * FROM Segments WHERE CameraID = ? AND Start >= ? AND End <= ?'
+	const Data = {
+		segments: []
+	};
+
+	const Segments = Object.keys(Index[ID]).filter(
+		(K) => parseInt(K) >= parseInt(Start) && parseInt(K) <= parseInt(End)
 	);
-	STMT.all([CameraID, parseInt(Start), parseInt(End)], (err, rows) => {
-		Data.segments = rows;
-		STMT.finalize();
-		STMT = SQL.prepare(
-			'SELECT * FROM Events WHERE CameraID = ? AND Date >= ? AND Date <= ?'
+
+	Segments.forEach((K) => {
+		const FilePath = path.join(
+			config.system.storageVolume,
+			'NVRJS_SYSTEM',
+			ID,
+			Index[ID][K]
 		);
-		STMT.all([CameraID, parseInt(Start), parseInt(End)], (err, rows) => {
-			Data.events = rows;
-			STMT.finalize();
-			res.type('application/json');
-			res.status(200);
-			res.end(JSON.stringify(Data));
-		});
+
+		const PL = ReadMetaFile(FilePath);
+		if (PL !== false) {
+			Data.segments.push(PL);
+		}
 	});
+
+	res.type('application/json');
+	res.status(200);
+	res.end(JSON.stringify(Data));
 }
 
-const Processors = {};
-const Cameras = Object.keys(config.cameras);
-Cameras.forEach((cameraID) => {
-	const Cam = config.cameras[cameraID];
-	InitCamera(Cam, cameraID);
-});
-
-function CreateOrConnectSQL(CB) {
-	const Path = path.join(
-		config.system.storageVolume,
-		'NVRJS_SYSTEM',
-		'data.db'
-	);
-
-	if (!fs.existsSync(Path)) {
-		console.log(' - Creating db structure.');
-		SQL = new sql.Database(Path, () => {
-			SQL.run(
-				'CREATE TABLE Segments(SegmentID TEXT, CameraID TEXT, FileName TEXT, Start NUMERIC, End NUMERIC)',
-				() => {
-					SQL.run(
-						'CREATE TABLE Events(EventID TEXT,CameraID TEXT, Name TEXT, SensorID TEXT, Date NUMERIC)',
-						() => {
-							SQL.close();
-							console.log(' - Connecting to db.');
-							SQL = new sql.Database(Path, CB);
-						}
-					);
-				}
-			);
-		});
-	} else {
-		console.log(' - Connecting to db.');
-		SQL = new sql.Database(Path, CB);
-	}
-}
-
+/* FFMPEG Exit code check */
 function FFMPEGExitDueToError(Code, Signal) {
 	if (Code == null && Signal === 'SIGKILL') {
 		return false;
@@ -388,8 +395,116 @@ function FFMPEGExitDueToError(Code, Signal) {
 	}
 }
 
+/* Start up cameras */
+const Cameras = Object.keys(config.cameras);
+Cameras.forEach((cameraID) => {
+	const Cam = config.cameras[cameraID];
+	InitCamera(Cam, cameraID);
+});
+
+/* Start Purge timer */
+console.log(' - Strting purge timer.');
+setInterval(
+	purgeContinuous,
+	60000 * 60 * config.system.continuousPurgeIntervalHours
+);
+
+/* Create PlaceHolder Metafile */
+function CreatePlaceHolderMeta(CameraID) {
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', CameraID);
+	const Start = dayjs().unix();
+
+	const Meta = {
+		segment: {
+			metaFileName: `${Start}_placeholder.json`,
+			cameraId: CameraID,
+			startTime: Start,
+			fileName: undefined,
+			endTime: 0,
+			checksum: 0,
+			segmentId: generateUUID()
+		},
+		events: []
+	};
+
+	const FP = path.join(Path, Meta.segment.metaFileName);
+	if (WriteMetaFile(Meta, FP)) {
+		Index[CameraID][Start] = Meta.segment.metaFileName;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+/* Create Metafile */
+function CreateMeta(CameraID, fileName) {
+	fileName = fileName.trim().replace(/\n/g, '');
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', CameraID);
+
+	const Start = parseInt(fileName.split('.')[0]);
+	const End = dayjs().unix();
+
+	const Meta = {
+		segment: {
+			metaFileName: fileName.replace(FileType, '.json'),
+			cameraId: CameraID,
+			fileName: fileName,
+			startTime: Start,
+			endTime: End,
+			checksum: 0,
+			segmentId: generateUUID()
+		},
+		events: []
+	};
+
+	const fileBuffer = fs.readFileSync(path.join(Path, fileName));
+	const HashSum = crypto.createHash('sha256');
+	HashSum.update(fileBuffer);
+
+	const Hex = HashSum.digest('hex');
+	Meta.segment.checksum = `sha256:${Hex}`;
+
+	const Last = Math.max(
+		...Object.keys(Index[CameraID]).map((E) => parseInt(E))
+	);
+
+	const PHFOP = path.join(Path, Index[CameraID][Last]);
+	const PHFO = ReadMetaFile(PHFOP);
+
+	if (PHFO !== false) {
+		Meta.events = PHFO.events;
+		if (WriteMetaFile(Meta, path.join(Path, Meta.segment.metaFileName))) {
+			delete Index[CameraID][Last];
+			fs.unlinkSync(PHFOP);
+			Index[CameraID][Start] = Meta.segment.metaFileName;
+			CreatePlaceHolderMeta(CameraID);
+		}
+	}
+}
+
+/* Camera Initer */
 function InitCamera(Cam, cameraID) {
-	console.log(' - Configuring camera: ' + Cam.name);
+	console.log(` - Configuring camera: ${Cam.name}`);
+
+	const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', cameraID);
+	if (!fs.existsSync(Path)) {
+		fs.mkdirSync(Path);
+	}
+
+	Index[cameraID] = {};
+
+	const SegMetaFiles = fs
+		.readdirSync(Path)
+		.filter(
+			(File) => path.extname(File) === '.json' && !File.includes('_placeholder')
+		);
+
+	SegMetaFiles.forEach((MF) => {
+		const MD = ReadMetaFile(path.join(Path, MF));
+		if (MD !== false) {
+			Index[cameraID][MD.segment.startTime] = MD.segment.metaFileName;
+		}
+	});
 
 	const CommandArgs = [];
 
@@ -409,33 +524,51 @@ function InitCamera(Cam, cameraID) {
 		'/segments/' + cameraID,
 		CheckAuthMW,
 		express.static(
-			path.join(
-				config.system.storageVolume,
-				'NVRJS_CAMERA_RECORDINGS',
-				cameraID
-			),
+			path.join(config.system.storageVolume, 'NVRJS_SYSTEM', cameraID),
 			{ acceptRanges: true }
 		)
 	);
 
-	const Path = path.join(
-		config.system.storageVolume,
-		'NVRJS_CAMERA_RECORDINGS',
-		cameraID
-	);
-	if (!fs.existsSync(Path)) {
-		fs.mkdirSync(Path);
-	}
-
 	if (Cam.continuous !== undefined && Cam.continuous) {
+		let CV = 'copy';
+		let CA = 'copy';
+
+		if (Cam.postInput !== undefined) {
+			if (Cam.postInput.videoEncoder !== undefined) {
+				CV = Cam.postInput.videoEncoder;
+			}
+			if (Cam.postInput.audioEncoder !== undefined) {
+				CA = Cam.postInput.audioEncoder;
+			}
+		}
 		CommandArgs.push('-c:v');
-		CommandArgs.push('copy');
+		CommandArgs.push(CV);
+
+		if (
+			Cam.postInput !== undefined &&
+			Cam.postInput.videoAdditional !== undefined
+		) {
+			Object.keys(Cam.postInput.videoAdditional).forEach((EK) => {
+				CommandArgs.push(`-${EK}`);
+				CommandArgs.push(Cam.postInput.videoAdditional[EK]);
+			});
+		}
+
 		CommandArgs.push('-c:a');
-		CommandArgs.push('copy');
+		CommandArgs.push(CA);
+
+		if (
+			Cam.postInput !== undefined &&
+			Cam.postInput.audioAdditional !== undefined
+		) {
+			Object.keys(Cam.postInput.audioAdditional).forEach((EK) => {
+				CommandArgs.push(`-${EK}`);
+				CommandArgs.push(Cam.postInput.audioAdditional[EK]);
+			});
+		}
+
 		CommandArgs.push('-f');
 		CommandArgs.push('segment');
-		CommandArgs.push('-movflags');
-		CommandArgs.push('+faststart');
 		CommandArgs.push('-segment_atclocktime');
 		CommandArgs.push('1');
 		CommandArgs.push('-reset_timestamps');
@@ -446,7 +579,9 @@ function InitCamera(Cam, cameraID) {
 		CommandArgs.push('pipe:4');
 		CommandArgs.push('-segment_time');
 		CommandArgs.push(60 * config.system.continuousSegTimeMinutes);
-		CommandArgs.push(path.join(Path, '%Y-%m-%dT%H-%M-%S.mp4'));
+		CommandArgs.push('-movflags');
+		CommandArgs.push('+faststart');
+		CommandArgs.push(path.join(Path, `%s${FileType}`));
 	}
 
 	Object.keys(Cam.liveConfig.streamConfig).forEach((streamingConfigKey) => {
@@ -464,18 +599,20 @@ function InitCamera(Cam, cameraID) {
 		detached: true,
 		stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe']
 	};
-	const respawn = (Spawned) => {
+	const respawn = (Spawned, PrevSock) => {
 		const MP4F = new MP4Frag();
 
 		const IOptions = {
 			path: '/streams/' + cameraID
 		};
-		const Socket = io(HTTP, IOptions);
-		Socket.on('connection', (ClientSocket) => {
-			if (CheckAuthMW(ClientSocket)) {
-				ClientSocket.emit('segment', MP4F.initialization);
-			}
-		});
+		const Socket = PrevSock || io(HTTP, IOptions); // avoid adding a ton of listeners to the same HTTP server
+		if (!PrevSock) {
+			Socket.on('connection', (ClientSocket) => {
+				if (CheckAuthMW(ClientSocket)) {
+					ClientSocket.emit('segment', MP4F.initialization);
+				}
+			});
+		}
 
 		MP4F.on('segment', (data) => {
 			Socket.sockets.sockets.forEach((ClientSocket) => {
@@ -485,15 +622,18 @@ function InitCamera(Cam, cameraID) {
 
 		Spawned.on('close', () => {
 			console.log(
-				' - Camera: ' +
-					Cam.name +
-					' was terminated, respawning after 10 seconds...'
+				` - Camera: ${Cam.name}  was terminated, respawning after 10 seconds...`
 			);
 			Spawned.kill();
 			MP4F.destroy();
 			setTimeout(() => {
 				respawn(
-					childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
+					childprocess.spawn(
+						config.system.ffmpegLocation,
+						CommandArgs,
+						Options
+					),
+					Socket
 				);
 			}, 10000);
 		});
@@ -502,30 +642,29 @@ function InitCamera(Cam, cameraID) {
 			MP4F.write(data, 'binary');
 		});
 		Spawned.stdio[4].on('data', (FN) => {
-			if (Processors[cameraID] !== undefined) {
-				const FileName = FN.toString().trim().replace(/\n/g, '');
-				const Start = dayjs(
-					FileName.replace(/.mp4/g, ''),
-					'YYYY-MM-DDTHH-mm-ss'
-				).unix();
-				const End = dayjs().unix();
-				FIFO.enqueue({
-					statement:
-						'INSERT INTO Segments(SegmentID,CameraID,FileName,Start,End) VALUES(?,?,?,?,?)',
-					params: [generateUUID(), cameraID, FileName, Start, End]
-				});
-			}
+			CreateMeta(cameraID, FN.toString());
 		});
+
+		return Spawned;
 	};
 
-	respawn(
+	const Process = respawn(
 		childprocess.spawn(config.system.ffmpegLocation, CommandArgs, Options)
 	);
 
-	Processors[cameraID] = {
-		CameraInfo: Cam
-	};
+	if (!CreatePlaceHolderMeta(cameraID)) {
+		Process.removeAllListeners('close');
+		Process.kill();
+		console.log(
+			`   - Could not kick start segment management for camera: ${Cam.name}`
+		);
+		console.log(`   - Camera will not be started.`);
+	} else {
+		console.log(`   - Camera: ${Cam.name} started.`);
+	}
 }
+
+/* Gen ID */
 function generateUUID() {
 	var d = new Date().getTime();
 	var d2 =
@@ -546,62 +685,100 @@ function generateUUID() {
 	});
 }
 
+/* Logged in check */
 function CheckAuthMW(req, res, next) {
-	if (res === undefined && next === undefined) {
-		if (req.handshake.headers.cookie !== undefined) {
-			const CS = cookie.parse(req.handshake.headers.cookie);
-			const Signed = cookieparser.signedCookies(CS, config.system.cookieKey);
-			if (
-				Signed.Authentication === undefined ||
-				Signed.Authentication !== 'Success'
-			) {
-				req.disconnect();
-				return false;
-			} else {
-				return true;
-			}
-		} else {
-			req.disconnect();
-			return false;
-		}
-	} else {
-		if (
-			req.signedCookies.Authentication === undefined ||
-			req.signedCookies.Authentication !== 'Success'
-		) {
-			res.status(401);
-			res.end();
+	const NonInteractive = res === undefined && next === undefined;
+
+	if (
+		config.system.disableUISecurity !== undefined &&
+		config.system.disableUISecurity
+	) {
+		if (NonInteractive) {
+			return true;
 		} else {
 			next();
+		}
+	} else {
+		if (NonInteractive) {
+			if (req.handshake.headers.cookie !== undefined) {
+				const CS = cookie.parse(req.handshake.headers.cookie);
+				const Signed = cookieparser.signedCookies(CS, config.system.cookieKey);
+				if (
+					Signed.Authentication === undefined ||
+					Signed.Authentication !== 'Success'
+				) {
+					req.disconnect();
+					return false;
+				} else {
+					return true;
+				}
+			} else {
+				req.disconnect();
+				return false;
+			}
+		} else {
+			if (
+				req.signedCookies.Authentication === undefined ||
+				req.signedCookies.Authentication !== 'Success'
+			) {
+				res.status(401);
+				res.end();
+			} else {
+				next();
+			}
 		}
 	}
 }
 
-async function purgeContinuous() {
+/* Purge */
+function purgeContinuous() {
 	console.log(' - Purging data.');
+
 	const Date = dayjs().subtract(config.system.continuousDays, 'day').unix();
-	const STMT = SQL.prepare('SELECT * FROM Segments WHERE Start <= ?');
-	STMT.all([Date], (err, rows) => {
-		rows.forEach((S) => {
-			fs.unlinkSync(
-				path.join(
-					config.system.storageVolume,
-					'NVRJS_CAMERA_RECORDINGS',
-					S.CameraID,
-					S.FileName
-				)
-			);
-		});
-		FIFO.enqueue({
-			statement: `DELETE FROM Segments WHERE Start <= ${Date}`,
-			params: []
-		});
-		FIFO.enqueue({
-			statement: `DELETE FROM Events WHERE Date <= ${Date}`,
-			params: []
+
+	Object.keys(Index).forEach((K) => {
+		const Files = Object.keys(Index[K]).filter((TSK) => parseInt(TSK) <= Date);
+		Files.forEach((F) => {
+			const Path = path.join(config.system.storageVolume, 'NVRJS_SYSTEM', K);
+			delete Index[K][F]; // Index Entry
+			try {
+				fs.unlinkSync(path.join(Path, `${F}.json`)); // Metafile
+			} catch (e) {
+				// file couldn't be removed, likely due to permission issue, flaky disk etc.
+				// not anything we can do about it, but don't crash.
+			}
+			try {
+				fs.unlinkSync(path.join(Path, `${F}${FileType}`)); // footage
+			} catch (e) {
+				// ditto
+			}
 		});
 	});
 }
 
+/* Write Operation */
+function WriteMetaFile(OBJ, FilePath) {
+	try {
+		fs.writeFileSync(FilePath, JSON.stringify(OBJ));
+		return true;
+	} catch (Err) {
+		return false;
+	}
+}
+
+/* Read Operation */
+function ReadMetaFile(FilePath) {
+	try {
+		const Result = fs.readFileSync(FilePath, 'utf8');
+		const OBJ = JSON.parse(Result);
+		return OBJ;
+	} catch (Err) {
+		return false;
+	}
+}
+
 HTTP.listen(config.system.interfacePort);
 console.log(' - NVR JS is Ready!');
+
+/* Why not */
+setTimeout(purgeContinuous, 1000);

@@ -1,6 +1,6 @@
 {
 	"name": "nvr-js",
-	"version": "2.0.0",
+	"version": "3.0.0",
 	"description": "A simple, lightweight, but very functional NVR aimed at 24/7 recording using nodejs",
 	"main": "NVRJS.js",
 	"keywords": [
@@ -22,19 +22,18 @@
 	"dependencies": {
 		"child_process": "^1.0.2",
 		"cookie-parser": "^1.4.6",
-		"express": "^4.17.2",
+		"express": "^4.18.1",
 		"handlebars": "^4.7.7",
-		"socket.io": "^4.4.0",
-		"sqlite3": "^5.0.2",
-		"dayjs": "^1.10.7",
+		"socket.io": "^4.5.2",
+		"dayjs": "^1.11.4",
 		"bcrypt": "^5.0.1",
-		"node-os-utils": "^1.3.5",
-		"queue-fifo":"^0.2.6",
-		"express-rate-limit":"^5.5.1"
+		"node-os-utils": "^1.3.7",
+		"express-rate-limit": "^6.6.0",
+		"sanitize-filename":"1.6.3"
 	},
 	"devDependencies": {
-		"eslint": "^8.5.0",
-		"prettier": "^2.5.1"
+		"eslint": "^8.21.0",
+		"prettier": "^2.7.1"
 	},
 	"bugs": {
 		"url": "https://github.com/marcus-j-davies/nvr-js/issues"

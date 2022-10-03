@@ -3,14 +3,15 @@
 # nvr-js
 ![NPM](https://img.shields.io/npm/l/nvr-js)
 ![npm](https://img.shields.io/npm/v/nvr-js)
-[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/marcus-j-davies/nvr-js.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/marcus-j-davies/nvr-js/context:javascript)
-![npms.io (maintenance)](https://img.shields.io/npms-io/maintenance-score/nvr-js)
+![Package Quality](https://packagequality.com/shield/nvr-js.svg)
+![GitHub issues](https://img.shields.io/github/issues-raw/marcus-j-davies/nvr-js)
+![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/marcus-j-davies/nvr-js)
 ![Libraries.io dependency status for latest release](https://img.shields.io/librariesio/release/npm/nvr-js)
 
 NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.  
 it's primarily aimed for 24/7 recording and live viewing.
 
-Under the hood it uses ffmpeg, node js, websockets and sqlite, all wrapped in a web based user interface.
+Under the hood it uses ffmpeg, node js and websockets, all wrapped in a web based user interface.
 The NVR has an API that allows to create events and timestamp them on the 24/7 recordings.
 
 The 24/7 recordings can be reviewed using a timeline UI where the events are also time aligned on that same timeline.
@@ -46,8 +47,10 @@ it will then terminate allowing you to start adjusting your system, before start
 module.exports = {
 	/* System Settings */
 	system: {
+		/* Disable Security - Know what your doing before changing this! */
+		disableUISecurity: false,
 		/* Username */
-		username: "admin",
+		username: 'admin',
 		/* bcrypt password (default: admin) */
 		password: '$2a$10$CnOx/6vFY2ehRDf68yqd..aLlv0UM.zeBLKnRjuU8YykCsC2Ap3iG',
 		/* bcrypt API Key (default: x7Te9m38JHQq6ddv) */
@@ -77,11 +80,19 @@ module.exports = {
 				fflags: '+igndts',
 				analyzeduration: '1000000',
 				probesize: '1000000',
-				rtsp_transport: 'tcp',
-				stimeout: '30000000'
+				rtsp_transport: 'tcp'
 			},
 			/* Input Address */
 			input: 'rtsp://user:password@ip:port/live0',
+			/* Only use these if the incoming stream is not already h264/5 */
+			/* Note that depending on the encoder in use, The CPU could be taxed */
+			/* The below will use the HW assisted h264 encoder for RPi4 */
+			postInput: {
+				// videoEncoder: 'h264_v4l2m2m',
+				// videoAdditional:{ffmpeg_option:'value'}
+				// audioEncoder: 'aac',
+				// audioAdditional:{ffmpeg_option:'value'}
+			},
 			/* Recording 24/7 */
 			/* Disabling continuous recording, will disable the ability to create events */
 			continuous: true,
@@ -112,9 +123,9 @@ or some other key event - It's really up to you.
 
 ```javascript
 {
-     "name": "Motion Detected" | "Door Opened" | "Some Other Event" | "Of Your Choice",
+     "event": "Motion Detected" | "Door Opened" | "Some Other Event" | "Of Your Choice",
      "sensorId": "HUEN849",
-     "date": 1636194611
+     "timestamp": 1636194611
 }
 ```
 
@@ -123,7 +134,7 @@ http://IP:7878/api/{APIKey}/event/{camera-id}
 Example: http://IP:7878/api/x7Te9m38JHQq6ddv/event/66e39d21-72c4-405c-a838-05a8e8fe0742
 
 ### Anyway
-I built this for my needs, it's very DIY and will likely have some faults in some places.  
+I built this for my needs, it's very DIY but should be fairly stable (famous last words)
 But if you want to use it, change it, build on it, feel free - I welcome PR's.
 
 ```

@@ -126,7 +126,7 @@ input[type='password'], input[type='text'] {
 }
 
 .cameraPanel .snapShot {
-	width: 120px;
+	width: 100px;
 	border-radius: 4px;
 }
 .cameraPanel .cameraPanelOption {

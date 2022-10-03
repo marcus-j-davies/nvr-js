@@ -3,9 +3,9 @@
 # nvr-js
 ![NPM](https://img.shields.io/npm/l/nvr-js)
 ![npm](https://img.shields.io/npm/v/nvr-js)
-[![Package Quality](https://packagequality.com/badge/nvr-js.png)](https://packagequality.com/#?package=nvr-js)
-(https://lgtm.com/projects/g/marcus-j-davies/nvr-js/context:javascript)
-![npms.io (maintenance)](https://img.shields.io/npms-io/maintenance-score/nvr-js)
+![Package Quality](https://packagequality.com/shield/nvr-js.svg)
+![GitHub issues](https://img.shields.io/github/issues-raw/marcus-j-davies/nvr-js)
+![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/marcus-j-davies/nvr-js)
 ![Libraries.io dependency status for latest release](https://img.shields.io/librariesio/release/npm/nvr-js)
 
 NVR JS is a simple, very lightweight and efficient CCTV NVR based on Node JS.  

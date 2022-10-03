@@ -145,8 +145,7 @@ App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
 
 // Get Event data (Uses shared API)
 App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
-	const ID = sanitize(req.params.CameraID);
-	GetEventData(res, ID, req.params.Start, req.params.End);
+	GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
 });
 
 /* Configure APIs */
@@ -354,11 +353,13 @@ App.get('/api/:APIKey/geteventdata/:CameraID/:Start/:End', (req, res) => {
 });
 
 function GetEventData(res, CameraID, Start, End) {
+	const ID = sanitize(CameraID);
+
 	const Data = {
 		segments: []
 	};
 
-	const Segments = Object.keys(Index[CameraID]).filter(
+	const Segments = Object.keys(Index[ID]).filter(
 		(K) => parseInt(K) >= parseInt(Start) && parseInt(K) <= parseInt(End)
 	);
 
@@ -366,8 +367,8 @@ function GetEventData(res, CameraID, Start, End) {
 		const FilePath = path.join(
 			config.system.storageVolume,
 			'NVRJS_SYSTEM',
-			CameraID,
-			Index[CameraID][K]
+			ID,
+			Index[ID][K]
 		);
 
 		const PL = ReadMetaFile(FilePath);

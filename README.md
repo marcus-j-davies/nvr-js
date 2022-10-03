@@ -3,7 +3,8 @@
 # nvr-js
 ![NPM](https://img.shields.io/npm/l/nvr-js)
 ![npm](https://img.shields.io/npm/v/nvr-js)
-[![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/marcus-j-davies/nvr-js.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/marcus-j-davies/nvr-js/context:javascript)
+[![Package Quality](https://packagequality.com/badge/nvr-js.png)](https://packagequality.com/#?package=nvr-js)
+(https://lgtm.com/projects/g/marcus-j-davies/nvr-js/context:javascript)
 ![npms.io (maintenance)](https://img.shields.io/npms-io/maintenance-score/nvr-js)
 ![Libraries.io dependency status for latest release](https://img.shields.io/librariesio/release/npm/nvr-js)
 

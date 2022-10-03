@@ -144,7 +144,13 @@ App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
 
 // Get Event data (Uses shared API)
 App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
-	GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
+	if(req.params.CameraID.includes('/') || req.params.CameraID.includes('\\')){
+		res.status(500);
+		res.end();
+	}else{
+		GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
+	}
+	
 });
 
 /* Configure APIs */

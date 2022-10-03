@@ -12,6 +12,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const osu = require('node-os-utils');
+const sanitize = require('sanitize-filename');
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
@@ -144,13 +145,8 @@ App.get('/snapshot/:CameraID/:Width', CheckAuthMW, (req, res) => {
 
 // Get Event data (Uses shared API)
 App.get('/geteventdata/:CameraID/:Start/:End', CheckAuthMW, (req, res) => {
-	if(req.params.CameraID.includes('/') || req.params.CameraID.includes('\\')){
-		res.status(500);
-		res.end();
-	}else{
-		GetEventData(res, req.params.CameraID, req.params.Start, req.params.End);
-	}
-	
+	const ID = sanitize(req.params.CameraID);
+	GetEventData(res, ID, req.params.Start, req.params.End);
 });
 
 /* Configure APIs */
